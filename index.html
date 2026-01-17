@@ -217,15 +217,24 @@
                 </div>
             </div>
 
-            <div class="mb-8 relative">
-                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <i class="fas fa-search text-gray-400 text-xl"></i>
-                </div>
-                <input type="text" id="search-input" oninput="renderList()"
-                    class="pl-12 w-full p-5 bg-white border-2 border-gray-200 rounded-2xl font-bold text-black outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all text-xl shadow-lg"
-                    placeholder="Kërko (Emrin, Nr. Vërtetimit ose Telefonin)...">
+            <input type="text" id="search-input" oninput="renderList()"
+                class="w-full p-5 bg-white border-2 rounded-2xl font-bold text-xl shadow-lg mb-8 outline-none focus:border-green-500"
+                placeholder="Kërko klientin...">
+            <div class="overflow-x-auto bg-white rounded-2xl shadow-xl border border-gray-100">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-800 text-white text-[10px] uppercase tracking-wider">
+                            <th class="p-4 font-black">Nr. Vërtetimit</th>
+                            <th class="p-4 font-black">Klienti</th>
+                            <th class="p-4 font-black">Data</th>
+                            <th class="p-4 font-black">Çmimi</th>
+                            <th class="p-4 font-black">Lëshuar nga</th>
+                            <th class="p-4 font-black text-center">Veprimet</th>
+                        </tr>
+                    </thead>
+                    <tbody id="docs-list"></tbody>
+                </table>
             </div>
-            <div id="docs-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"></div>
         </div>
 
         <!-- Placeholder for other views to be added by script -->
@@ -847,7 +856,7 @@
             FIXED_PREPS.forEach(p => togglePrepRow(p.replace(/\s/g, '_'), false));
         }
 
-        function editDoc(id) {
+        function editDoc(id, silent = false) {
             const d = db.find(x => x.id === id);
             if (!d) return;
             currentId = id;
@@ -878,8 +887,10 @@
                 } else { addNewPrepField(p.emri, p.sasia, p.njesia); }
             });
 
-            document.getElementById('list-view').classList.add('hidden');
-            document.getElementById('edit-view').classList.remove('hidden');
+            if (!silent) {
+                document.getElementById('list-view').classList.add('hidden');
+                document.getElementById('edit-view').classList.remove('hidden');
+            }
 
             const nrVInput = document.getElementById('f-nr-v');
             nrVInput.readOnly = false;
@@ -893,9 +904,18 @@
         }
 
         function deleteDoc(id) {
-            if (confirm("Fshij dokumentin?")) {
-                firestore.collection('vertetimet').doc(String(id)).delete();
-            }
+            if (!confirm("A jeni i sigurt që dëshironi të fshini këtë vërtetim? Ky veprim nuk mund të kthehet.")) return;
+            firestore.collection('vertetimet').doc(String(id)).delete()
+                .then(() => alert("Vërtetimi u fshie me sukses!"))
+                .catch(e => alert("Gabim gjatë fshirjes: " + e.message));
+        }
+
+        async function triggerAction(id, action) {
+            const d = db.find(x => String(x.id) === String(id));
+            if (!d) return;
+            // Pre-load data into form fields for PDF generation
+            editDoc(id, true);
+            setTimeout(() => { sharePdf(d, action); }, 500);
         }
 
         function showDashboard() {
@@ -944,43 +964,27 @@
         }
 
         function renderList() {
-            const list = document.getElementById('docs-list');
-            const searchVal = document.getElementById('search-input')?.value.toLowerCase().trim() || '';
-            let sortedDb = [...db].sort((a, b) => (b.id || 0) - (a.id || 0));
+            const query = document.getElementById('search-input')?.value.toLowerCase() || '';
+            let filtered = db.filter(d => (d.klienti || '').toLowerCase().includes(query) || (d.nr_v || '').toLowerCase().includes(query));
+            if (showOnlyExpired) filtered = filtered.filter(d => monthsDiff(d.data) >= 6);
+            document.getElementById('btn-panic').textContent = showOnlyExpired ? 'Filtro: Skaduar' : 'Filtro: Të Gjitha';
 
-            if (showOnlyExpired) sortedDb = sortedDb.filter(d => monthsDiff(d.data) >= 6);
-            if (searchVal) {
-                sortedDb = sortedDb.filter(d => (d.klienti || '').toLowerCase().includes(searchVal) || (d.nr_v || '').toString().toLowerCase().includes(searchVal) || (d.tel || '').toString().toLowerCase().includes(searchVal));
-            }
-
-            if (sortedDb.length === 0) {
-                list.innerHTML = `<div class="col-span-full py-20 text-center opacity-50 font-bold uppercase tracking-widest text-gray-400">Nuk u gjet asnjë vërtetim</div>`;
-                return;
-            }
-
-            list.innerHTML = sortedDb.map(d => {
-                const expired = monthsDiff(d.data) >= 6;
-                return `<div class="${expired ? 'bg-red-50 border-red-400' : 'bg-white border-blue-500'} p-4 rounded-xl shadow-sm border-l-4 flex flex-col gap-4 mb-3 transition-all">
-                    <div class="flex-1">
-                        <div class="flex items-center flex-wrap gap-2 text-sm text-gray-700">
-                             <span class="font-black bg-gray-100 px-2 py-1 rounded">#${d.nr_v || '--'}</span>
-                             <span class="font-black uppercase text-gray-900">${d.klienti || 'PA EMËR'}</span>
+            document.getElementById('docs-list').innerHTML = filtered.map(d => `
+                <tr class="border-b border-gray-100 hover:bg-green-50/40 transition-colors group">
+                    <td class="p-4"><span class="bg-green-100 text-green-800 px-2 py-1 rounded text-[10px] font-black">${d.nr_v}</span></td>
+                    <td class="p-4 font-black text-gray-800 text-xs uppercase">${d.klienti}</td>
+                    <td class="p-4 font-bold text-gray-600 text-xs">${d.data.split('-').reverse().join('/')}</td>
+                    <td class="p-4 font-black text-gray-900 text-xs">${d.cmimi ? d.cmimi + ' €' : '-'}</td>
+                    <td class="p-4 text-gray-400 text-[10px] font-medium truncate max-w-[150px] italic">${d.te_dhenat_e_userit || 'Sistemi'}</td>
+                    <td class="p-4 text-center">
+                        <div class="flex items-center justify-center gap-4">
+                            <button onclick="triggerAction('${d.id}', 'view')" class="text-blue-500 hover:text-blue-700 transition-all hover:scale-125" title="Shiko PDF"><i class="fas fa-file-pdf"></i></button>
+                            <button onclick="editDoc(${d.id})" class="text-amber-500 hover:text-amber-700 transition-all hover:scale-125" title="Edito"><i class="fas fa-pencil-alt"></i></button>
+                            <button onclick="triggerAction('${d.id}', 'share')" class="text-green-600 hover:text-green-800 transition-all hover:scale-125" title="Dërgo në Email"><i class="fas fa-share-alt"></i></button>
+                            <button onclick="deleteDoc(${d.id})" class="text-red-400 hover:text-red-600 transition-all hover:scale-125" title="Fshij"><i class="fas fa-trash-alt"></i></button>
                         </div>
-                        <div class="text-xs text-gray-400 mt-1 font-bold">${d.data} | Lëshuar nga: ${d.te_dhenat_e_userit || d.issuedBy || 'Sistemi'}</div>
-                        ${d.cmimi ? `<div class="mt-1 text-blue-600 font-black">${d.cmimi} €</div>` : ''}
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="previewDoc(${d.id})" class="flex-1 h-10 bg-gray-100 text-gray-700 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all active:scale-95"><i class="fas fa-eye text-sm"></i> SHIKO</button>
-                        <button onclick="shareDocById(${d.id})" class="flex-1 h-10 bg-green-50 text-green-700 rounded-lg font-bold text-xs border border-green-100 flex items-center justify-center gap-2 transition-all active:scale-95 hover:bg-green-600 hover:text-white" title="Dërgo në E-mail">
-                            <i class="fas fa-envelope text-sm"></i> DËRGO
-                        </button>
-                        ${currentRole === 'admin' ?
-                        `<button onclick="editDoc(${d.id})" class="w-10 h-10 bg-amber-50 text-amber-600 rounded-lg hover:bg-amber-500 hover:text-white transition-all flex items-center justify-center"><i class="fas fa-edit"></i></button>
-                        <button onclick="deleteDoc(${d.id})" class="w-10 h-10 bg-red-50 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all flex items-center justify-center"><i class="fas fa-trash"></i></button>`
-                        : ''}
-                    </div>
-                </div>`;
-            }).join('');
+                    </td>
+                </tr>`).join('');
         }
 
         function updateDashboardCount() {
@@ -1215,7 +1219,6 @@
                         <div class="text-center pt-2 mt-4 border-t border-black pb-0 relative">
                             <div class="text-[11px] font-black uppercase mb-0.5 tracking-tight text-black leading-none">NUI: 811320168 | RR. CEN DUGOLLI NR. 22, FERIZAJ | Email: ekologjia@gmail.com | Tel: 049 666 775</div>
                             <div class="italic text-[10px] font-bold text-gray-400 uppercase tracking-tighter text-center w-full leading-none">* Dokument zyrtar | Vlefshmëria: 6 muaj</div>
-                            <div class="mt-2 text-[9px] text-[#a0a0a0] font-bold uppercase tracking-widest">© 2026 Zhvilluar nga Visar F.</div>
                         </div>
                     </div>
                 </div>`;
@@ -1259,7 +1262,7 @@
             if (d) await sharePdf(d);
         }
 
-        async function sharePdf(d) {
+        async function sharePdf(d, action = 'share') {
             const cleanNr = d.nr_v.replace(/\//g, '-').replace(/Nr\.\s+/g, '').replace(/\s+/g, '');
             const cleanClient = d.klienti.trim().replace(/\s+/g, '_').toUpperCase();
             const filename = `Vertetim_${cleanNr}_${cleanClient}.pdf`;
@@ -1274,17 +1277,18 @@
                 margin: 0,
                 filename: filename,
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 3, useCORS: true, logging: false, width: 800, backgroundColor: '#ffffff' },
+                html2canvas: { scale: 2, useCORS: true, logging: false, width: 800, backgroundColor: '#ffffff' },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
-            const triggerMailto = () => {
-                const subject = encodeURIComponent("Vertetim per kryerjen e sherbimeve te DDD-se");
-                const body = encodeURIComponent("I nderuar klient, bashkangjitur gjeni vërtetimin e shërbimit DDD nga Ekologjia DDD.");
-                window.location.href = `mailto:${clientEmail}?subject=${subject}&body=${body}`;
-            };
-
             try {
+                if (action === 'view') {
+                    html2pdf().from(actualPrintContainer).set(opt).toPdf().get('pdf').then(function (pdf) {
+                        window.open(pdf.output('bloburl'), '_blank');
+                    });
+                    return;
+                }
+
                 // Force PDF Blob for iPhone Compatibility
                 const pdfBlob = await html2pdf().from(actualPrintContainer).set(opt).output('blob');
 
@@ -1303,11 +1307,16 @@
                     // Fallback: Download first, then Alert, then Mailto
                     html2pdf().from(actualPrintContainer).set(opt).save();
                     alert("Vërtetimi u ruajt në telefon. Tani mund ta dërgoni.");
+                    const triggerMailto = () => {
+                        const subject = encodeURIComponent("Vertetim per kryerjen e sherbimeve te DDD-se");
+                        const body = encodeURIComponent("I nderuar klient, bashkangjitur gjeni vërtetimin e shërbimit DDD nga Ekologjia DDD.");
+                        window.location.href = `mailto:${clientEmail}?subject=${subject}&body=${body}`;
+                    };
                     setTimeout(triggerMailto, 1000);
                 }
             } catch (err) {
                 console.error("Share error:", err);
-                triggerMailto();
+                alert("Gabim gjatë procesimit: " + err.message);
             }
         }
 

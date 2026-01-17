@@ -1270,7 +1270,8 @@
 
             // Setup Temp View for generation
             previewDoc(d);
-            await new Promise(r => setTimeout(r, 600));
+            // Wait for DOM to fully render
+            await new Promise(r => setTimeout(r, 800));
 
             const actualPrintContainer = document.querySelector('#pdf-render-zone #pdf-container-actual');
             const opt = {
@@ -1283,28 +1284,37 @@
 
             try {
                 if (action === 'view') {
+                    // For viewing: use bloburl method to open in new tab
                     html2pdf().from(actualPrintContainer).set(opt).toPdf().get('pdf').then(function (pdf) {
                         window.open(pdf.output('bloburl'), '_blank');
                     });
                     return;
                 }
 
-                // Force PDF Blob for iPhone Compatibility
+                // For sharing: Generate PDF Blob with proper async/await
+                console.log('Starting PDF generation...');
                 const pdfBlob = await html2pdf().from(actualPrintContainer).set(opt).output('blob');
+                console.log('PDF Blob created, size:', pdfBlob.size);
 
-                // WAIT 1000ms to ensure Blob is ready in memory
-                await new Promise(r => setTimeout(r, 1000));
+                // CRITICAL: Wait 2 seconds to ensure phone processes the graphics fully
+                console.log('Waiting 2 seconds before sharing...');
+                await new Promise(r => setTimeout(r, 2000));
 
+                // Create File Object with correct filename
                 const file = new File([pdfBlob], filename, { type: 'application/pdf' });
+                console.log('File Object created:', file.name, 'Size:', file.size);
 
                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    console.log('Opening share menu...');
                     await navigator.share({
                         files: [file],
                         title: filename,
                         text: 'Vertetim per kryerjen e sherbimeve te DDD-se'
                     });
+                    console.log('Share completed successfully');
                 } else {
                     // Fallback: Download first, then Alert, then Mailto
+                    console.log('Share API not available, falling back to download');
                     html2pdf().from(actualPrintContainer).set(opt).save();
                     alert("Vërtetimi u ruajt në telefon. Tani mund ta dërgoni.");
                     const triggerMailto = () => {

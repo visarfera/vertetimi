@@ -1328,13 +1328,48 @@
                 const pdfBlob = await html2pdf().from(actualPrintContainer).set(opt).output('blob');
                 console.log('PDF Blob created, size:', pdfBlob.size);
 
-                // Print-to-Share Method (iOS Fix)
-                // Show instruction to user
-                alert('Vërtetimi do të hapet për printim.\n\nPër ta dërguar me Email, shtypni ikonën "Share" lart te dritarja e printimit dhe zgjidhni Gmail/Mail.');
+                // Share Method with Fetch Hardening (iOS Reliability Fix)
+                const initialBlob = await html2pdf().from(actualPrintContainer).set(opt).output('blob');
 
-                // Trigger Print
-                // The @media print CSS will ensure only the certificate is visible
-                window.print();
+                // HARDENING: Create Object URL and Fetch it back
+                // This forces the browser to treat the blob as a distinct resource in memory
+                const tempUrl = URL.createObjectURL(initialBlob);
+                const fetched = await fetch(tempUrl);
+                const finalBlob = await fetched.blob();
+                URL.revokeObjectURL(tempUrl); // Clean up immediately
+
+                console.log('PDF Hardened Blob created, size:', finalBlob.size);
+
+                // Create File Object - Enforce .pdf
+                const file = new File([finalBlob], "Vertetimi.pdf", { type: 'application/pdf', lastModified: Date.now() });
+                const filesArray = [file];
+
+                // Check for Web Share API
+                if (navigator.canShare && navigator.canShare({ files: filesArray })) {
+                    console.log('Opening native share menu...');
+                    try {
+                        await navigator.share({
+                            files: filesArray,
+                            // NO text or url here to avoid Gmail Body Link issues
+                            title: 'Vertetimi'
+                        });
+                        console.log('Share completed');
+                    } catch (shareErr) {
+                        console.warn('Share cancelled/failed:', shareErr);
+                    }
+                } else {
+                    // Fallback
+                    console.log('Web Share API not supported, downloading...');
+                    const url = URL.createObjectURL(finalBlob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = "Vertetimi.pdf";
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    alert("Vërtetimi u shkarkua. Mund ta dërgoni manualisht.");
+                }
 
             } catch (err) {
                 console.error("Share error:", err);

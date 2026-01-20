@@ -1311,14 +1311,18 @@
                 const pdfBlob = await html2pdf().from(actualPrintContainer).set(opt).output('blob');
                 console.log('PDF Blob created, size:', pdfBlob.size);
 
-                // Short wait to ensure blob is ready and UI catches up
-                await new Promise(r => setTimeout(r, 500));
+                // CRITICAL FOR IOS: Wait 2 seconds to ensure phone processes the graphics fully
+                // The graphics card on iOS needs this time to flush the texture from the DOM before the share sheet grabs it.
+                console.log('Waiting 2 seconds before sharing (Strict iOS Requirement)...');
+                await new Promise(r => setTimeout(r, 2000));
 
-                // Create File Object with correct filename
-                const file = new File([pdfBlob], filename, { type: 'application/pdf', lastModified: Date.now() });
+                // Create File Object with strict syntax as requested
+                // Using a fresh array [pdfBlob] to ensure clean memory reference
+                const file = new File([pdfBlob], filename, { type: 'application/pdf' });
                 const filesArray = [file];
-                console.log('File Object created:', file.name, 'Size:', file.size);
+                console.log('File Object created:', file.name, 'Size:', file.size, 'Type:', file.type);
 
+                // Web Share API V2 Check
                 if (navigator.canShare && navigator.canShare({ files: filesArray })) {
                     console.log('Opening share menu...');
                     try {
@@ -1334,12 +1338,13 @@
                     }
                 } else {
                     // Fallback: Download first, then Alert, then Mailto
-                    console.log('Share API not available, falling back to download');
+                    console.log('Share API not available or file type not supported, falling back to download');
                     html2pdf().from(actualPrintContainer).set(opt).save();
-                    alert("Vërtetimi u ruajt në telefon. Tani mund ta dërgoni.");
+                    alert("Vërtetimi u ruajt në telefon. Tani mund ta dërgoni me dorë.");
+
                     const triggerMailto = () => {
                         const subject = encodeURIComponent("Vertetim per kryerjen e sherbimeve te DDD-se");
-                        const body = encodeURIComponent("I nderuar klient, bashkangjitur gjeni vërtetimin e shërbimit DDD nga Ekologjia DDD.");
+                        const body = encodeURIComponent("I nderuar klient, bashkangjitur gjeni vërtetimin e shërbimit DDD nga Ekologjia SHPK.");
                         window.location.href = `mailto:${clientEmail}?subject=${subject}&body=${body}`;
                     };
                     setTimeout(triggerMailto, 1000);

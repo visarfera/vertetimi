@@ -105,7 +105,7 @@
                 <div class="p-8">
                     <div class="text-center mb-10">
                         <h1 class="text-3xl font-black text-gray-900 italic tracking-tighter mb-2">EKOLOGJIA <span
-                                class="text-green-600">DDD</span></h1>
+                                class="text-green-600">SHPK</span></h1>
                         <p class="text-gray-500 font-bold uppercase tracking-wide text-sm">Identifikimi</p>
                     </div>
                     <div class="space-y-6">
@@ -375,12 +375,23 @@
                     </div>
 
                     <div class="md:col-span-2 mt-8 pt-8 border-t border-gray-100">
-                        <div class="mb-6">
-                            <label
-                                class="block text-[10px] font-black text-gray-400 uppercase mb-2 tracking-widest">EMRI I
-                                TEKNIKUT</label>
-                            <input type="text" id="f-tekniku-emri"
-                                class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl font-bold">
+                        <div class="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
+                            <div class="flex-grow">
+                                <label
+                                    class="block text-[10px] font-black text-gray-400 uppercase mb-2 tracking-widest">EMRI
+                                    I
+                                    TEKNIKUT</label>
+                                <input type="text" id="f-tekniku-emri"
+                                    class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl font-bold">
+                            </div>
+                            <div class="flex items-center pb-3">
+                                <label
+                                    class="flex items-center gap-2 cursor-pointer p-3 bg-gray-50 rounded-xl border border-gray-200 hover:bg-gray-100 transition-colors shadow-sm">
+                                    <input type="checkbox" id="f-shfaq-vulen" class="w-5 h-5 accent-green-600" checked>
+                                    <span class="text-[11px] font-black uppercase text-gray-600 select-none">Shfaq
+                                        Vulën</span>
+                                </label>
+                            </div>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div>
@@ -787,6 +798,7 @@
                 preparatet: preps,
                 sig_tekniku: (padTekniku && !padTekniku.isEmpty()) ? padTekniku.toDataURL('image/png') : (document.getElementById('sig-tekniku').dataset.latest || null),
                 sig_klienti: (padKlienti && !padKlienti.isEmpty()) ? padKlienti.toDataURL('image/png') : (document.getElementById('sig-klienti').dataset.latest || null),
+                shfaq_vulen: document.getElementById('f-shfaq-vulen').checked,
                 te_dhenat_e_userit: currentUser ? (currentUser.displayName || currentUser.email) : 'Sistemi',
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             };
@@ -830,7 +842,9 @@
             document.getElementById('f-data').value = tani.toISOString().split('T')[0];
             document.getElementById('f-ora').value = tani.toTimeString().slice(0, 5);
             document.getElementById('f-nr-v').value = getNextCertNumber();
+            document.getElementById('f-nr-v').value = getNextCertNumber();
             document.getElementById('f-shenime').value = DEFAULT_NOTE;
+            document.getElementById('f-shfaq-vulen').checked = true;
 
             document.getElementById('dashboard-view').classList.add('hidden');
             document.getElementById('list-view').classList.add('hidden');
@@ -872,6 +886,7 @@
             document.getElementById('f-tekniku-emri').value = d.tekniku_emri || "";
             document.getElementById('f-shenime').value = d.shenime || "";
             document.getElementById('f-cmimi').value = d.cmimi || "";
+            document.getElementById('f-shfaq-vulen').checked = (d.shfaq_vulen !== false);
 
             d.sherbimet?.forEach(v => { const cb = Array.from(document.querySelectorAll('.sh-check')).find(c => c.value === v); if (cb) cb.checked = true; });
             d.pestat?.forEach(v => { const cb = Array.from(document.querySelectorAll('.pest-check')).find(c => c.value === v); if (cb) cb.checked = true; });
@@ -1203,7 +1218,7 @@
                                 <div class="h-10 flex items-center justify-center mb-1">
                                      ${d.sig_tekniku ? `<img src="${d.sig_tekniku}" class="h-10 object-contain" style="filter: brightness(0.8) contrast(1.2);">` : (document.getElementById('sig-tekniku')?.dataset.latest ? `<img src="${document.getElementById('sig-tekniku').dataset.latest}" class="h-10 object-contain" style="filter: brightness(0.8) contrast(1.2);">` : '')}
                                 </div>
-                                <img src="https://i.imgur.com/6VuXLnd.png" class="absolute top-[-20px] left-1/2 -translate-x-1/2 w-28 h-auto mix-blend-multiply opacity-60 z-10" alt="Vula">
+                                ${(d.shfaq_vulen !== false) ? `<img src="https://i.imgur.com/6VuXLnd.png" class="absolute top-[-20px] left-1/2 -translate-x-1/2 w-[105px] h-auto mix-blend-multiply opacity-60 z-10" alt="Vula">` : ''}
                                 <div class="w-full border-t border-black pt-1 uppercase text-black font-black text-[12px]">TEKNIKU</div>
                                 ${d.tekniku_emri ? `<div class="text-[10px] text-gray-400 font-bold">${d.tekniku_emri}</div>` : ''}
                             </div>
@@ -1296,22 +1311,27 @@
                 const pdfBlob = await html2pdf().from(actualPrintContainer).set(opt).output('blob');
                 console.log('PDF Blob created, size:', pdfBlob.size);
 
-                // CRITICAL: Wait 2 seconds to ensure phone processes the graphics fully
-                console.log('Waiting 2 seconds before sharing...');
-                await new Promise(r => setTimeout(r, 2000));
+                // Short wait to ensure blob is ready and UI catches up
+                await new Promise(r => setTimeout(r, 500));
 
                 // Create File Object with correct filename
-                const file = new File([pdfBlob], filename, { type: 'application/pdf' });
+                const file = new File([pdfBlob], filename, { type: 'application/pdf', lastModified: Date.now() });
+                const filesArray = [file];
                 console.log('File Object created:', file.name, 'Size:', file.size);
 
-                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                if (navigator.canShare && navigator.canShare({ files: filesArray })) {
                     console.log('Opening share menu...');
-                    await navigator.share({
-                        files: [file],
-                        title: filename,
-                        text: 'Vertetim per kryerjen e sherbimeve te DDD-se'
-                    });
-                    console.log('Share completed successfully');
+                    try {
+                        await navigator.share({
+                            files: filesArray,
+                            title: filename,
+                            text: 'Vertetim per kryerjen e sherbimeve te DDD-se'
+                        });
+                        console.log('Share completed successfully');
+                    } catch (shareErr) {
+                        // User cancelled or share failed
+                        console.warn('Share cancelled or failed:', shareErr);
+                    }
                 } else {
                     // Fallback: Download first, then Alert, then Mailto
                     console.log('Share API not available, falling back to download');
@@ -1360,5 +1380,4 @@
     </script>
 </body>
 
-</html
-
+</html>

@@ -1158,6 +1158,7 @@
                                 <div class="flex items-end"><span class="font-black w-12 uppercase text-[10px] text-gray-400">M2:</span><span class="doc-line flex-1 font-bold px-2 border-b border-gray-100">${d.m2 || ''}</span></div>
                                 <div class="flex items-end"><span class="font-black w-12 uppercase text-[10px] text-gray-400">Tel:</span><span class="doc-line flex-1 font-bold px-2 border-b border-gray-100">${d.tel || ''}</span></div>
                             </div>
+                            <div class="flex items-end mt-1"><span class="font-black w-12 uppercase text-[10px] text-gray-400">Email:</span><span class="doc-line flex-1 font-bold px-2 border-b border-gray-100">${d.email || ''}</span></div>
                         </div>
 
                         <!-- SERVICES & PESTS -->
@@ -1311,44 +1312,19 @@
                 const pdfBlob = await html2pdf().from(actualPrintContainer).set(opt).output('blob');
                 console.log('PDF Blob created, size:', pdfBlob.size);
 
-                // CRITICAL FOR IOS: Wait 2 seconds to ensure phone processes the graphics fully
-                // The graphics card on iOS needs this time to flush the texture from the DOM before the share sheet grabs it.
-                console.log('Waiting 2 seconds before sharing (Strict iOS Requirement)...');
-                await new Promise(r => setTimeout(r, 2000));
+                // Open-to-Share Method (iOS Fix)
+                // Show instruction to user
+                alert('Vërtetimi do të hapet. Përdorni butonin Share të telefonit për ta dërguar pa humbur attachment-in.');
 
-                // Create File Object with strict syntax as requested
-                // Using a fresh array [pdfBlob] to ensure clean memory reference
-                const file = new File([pdfBlob], filename, { type: 'application/pdf' });
-                const filesArray = [file];
-                console.log('File Object created:', file.name, 'Size:', file.size, 'Type:', file.type);
+                // Create Blob URL
+                const blobUrl = URL.createObjectURL(pdfBlob);
 
-                // Web Share API V2 Check
-                if (navigator.canShare && navigator.canShare({ files: filesArray })) {
-                    console.log('Opening share menu...');
-                    try {
-                        await navigator.share({
-                            files: filesArray,
-                            title: filename,
-                            text: 'Vertetim per kryerjen e sherbimeve te DDD-se'
-                        });
-                        console.log('Share completed successfully');
-                    } catch (shareErr) {
-                        // User cancelled or share failed
-                        console.warn('Share cancelled or failed:', shareErr);
-                    }
-                } else {
-                    // Fallback: Download first, then Alert, then Mailto
-                    console.log('Share API not available or file type not supported, falling back to download');
-                    html2pdf().from(actualPrintContainer).set(opt).save();
-                    alert("Vërtetimi u ruajt në telefon. Tani mund ta dërgoni me dorë.");
+                // Open in new tab
+                window.open(blobUrl, '_blank');
 
-                    const triggerMailto = () => {
-                        const subject = encodeURIComponent("Vertetim per kryerjen e sherbimeve te DDD-se");
-                        const body = encodeURIComponent("I nderuar klient, bashkangjitur gjeni vërtetimin e shërbimit DDD nga Ekologjia SHPK.");
-                        window.location.href = `mailto:${clientEmail}?subject=${subject}&body=${body}`;
-                    };
-                    setTimeout(triggerMailto, 1000);
-                }
+                // Clean up URL object after a delay to ensure it loads
+                setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+
             } catch (err) {
                 console.error("Share error:", err);
                 alert("Gabim gjatë procesimit: " + err.message);

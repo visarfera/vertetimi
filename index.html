@@ -212,7 +212,7 @@
                 </button>
             </div>
             <div class="mt-12 text-[9px] text-[#a0a0a0] font-bold uppercase tracking-widest pb-4">
-                © 2026 Zhvilluar nga VEROS
+                <!-- Developer Credits Removed -->
             </div>
         </div>
 
@@ -1328,48 +1328,21 @@
                 const pdfBlob = await html2pdf().from(actualPrintContainer).set(opt).output('blob');
                 console.log('PDF Blob created, size:', pdfBlob.size);
 
-                // Share Method with Fetch Hardening (iOS Reliability Fix)
-                const initialBlob = await html2pdf().from(actualPrintContainer).set(opt).output('blob');
+                // Final "Open-to-Share" Method (iOS Fix)
+                // We use html2pdf to get the PDF object
+                // Then open it in a new tab using the native Blob/PDF viewer
 
-                // HARDENING: Create Object URL and Fetch it back
-                // This forces the browser to treat the blob as a distinct resource in memory
-                const tempUrl = URL.createObjectURL(initialBlob);
-                const fetched = await fetch(tempUrl);
-                const finalBlob = await fetched.blob();
-                URL.revokeObjectURL(tempUrl); // Clean up immediately
+                const worker = html2pdf().from(actualPrintContainer).set(opt).toPdf();
 
-                console.log('PDF Hardened Blob created, size:', finalBlob.size);
-
-                // Create File Object - Enforce .pdf
-                const file = new File([finalBlob], "Vertetimi.pdf", { type: 'application/pdf', lastModified: Date.now() });
-                const filesArray = [file];
-
-                // Check for Web Share API
-                if (navigator.canShare && navigator.canShare({ files: filesArray })) {
-                    console.log('Opening native share menu...');
-                    try {
-                        await navigator.share({
-                            files: filesArray,
-                            // NO text or url here to avoid Gmail Body Link issues
-                            title: 'Vertetimi'
-                        });
-                        console.log('Share completed');
-                    } catch (shareErr) {
-                        console.warn('Share cancelled/failed:', shareErr);
+                worker.get('pdf').then(function (pdf) {
+                    // For 'Dërgo' action, show the instruction alert
+                    if (action === 'share') {
+                        alert('Vërtetimi po hapet.\n\nPërdorni butonin Share (katrori me shigjetë) në fund të ekranit për ta dërguar si attachment në Gmail.');
                     }
-                } else {
-                    // Fallback
-                    console.log('Web Share API not supported, downloading...');
-                    const url = URL.createObjectURL(finalBlob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = "Vertetimi.pdf";
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                    alert("Vërtetimi u shkarkua. Mund ta dërgoni manualisht.");
-                }
+
+                    // Open in new tab (Works on iOS as "Preview")
+                    window.open(pdf.output('bloburl'), '_blank');
+                });
 
             } catch (err) {
                 console.error("Share error:", err);

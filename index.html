@@ -69,6 +69,22 @@
             .no-print {
                 display: none !important;
             }
+
+            #app {
+                display: none !important;
+            }
+
+            #pdf-render-zone {
+                display: block !important;
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                pointer-events: auto !important;
+                background: white !important;
+            }
         }
 
         @media (display-mode: standalone) {
@@ -1312,18 +1328,13 @@
                 const pdfBlob = await html2pdf().from(actualPrintContainer).set(opt).output('blob');
                 console.log('PDF Blob created, size:', pdfBlob.size);
 
-                // Open-to-Share Method (iOS Fix)
+                // Print-to-Share Method (iOS Fix)
                 // Show instruction to user
-                alert('Vërtetimi do të hapet. Përdorni butonin Share të telefonit për ta dërguar pa humbur attachment-in.');
+                alert('Vërtetimi do të hapet për printim.\n\nPër ta dërguar me Email, shtypni ikonën "Share" lart te dritarja e printimit dhe zgjidhni Gmail/Mail.');
 
-                // Create Blob URL
-                const blobUrl = URL.createObjectURL(pdfBlob);
-
-                // Open in new tab
-                window.open(blobUrl, '_blank');
-
-                // Clean up URL object after a delay to ensure it loads
-                setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+                // Trigger Print
+                // The @media print CSS will ensure only the certificate is visible
+                window.print();
 
             } catch (err) {
                 console.error("Share error:", err);

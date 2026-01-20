@@ -69,22 +69,6 @@
             .no-print {
                 display: none !important;
             }
-
-            #app {
-                display: none !important;
-            }
-
-            #pdf-render-zone {
-                display: block !important;
-                position: absolute !important;
-                left: 0 !important;
-                top: 0 !important;
-                width: 100% !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                pointer-events: auto !important;
-                background: white !important;
-            }
         }
 
         @media (display-mode: standalone) {
@@ -121,7 +105,7 @@
                 <div class="p-8">
                     <div class="text-center mb-10">
                         <h1 class="text-3xl font-black text-gray-900 italic tracking-tighter mb-2">EKOLOGJIA <span
-                                class="text-green-600">SHPK</span></h1>
+                                class="text-green-600">DDD</span></h1>
                         <p class="text-gray-500 font-bold uppercase tracking-wide text-sm">Identifikimi</p>
                     </div>
                     <div class="space-y-6">
@@ -159,7 +143,7 @@
             </div>
             <div class="mb-10 text-center mt-10">
                 <h1 class="text-4xl font-black text-gray-900 italic tracking-tighter mb-2">EKOLOGJIA <span
-                        class="text-green-600">SHPK</span></h1>
+                        class="text-green-600">DDD</span></h1>
                 <p class="text-gray-500 font-medium text-lg">Paneli i Kontrollit</p>
             </div>
 
@@ -212,7 +196,7 @@
                 </button>
             </div>
             <div class="mt-12 text-[9px] text-[#a0a0a0] font-bold uppercase tracking-widest pb-4">
-                <!-- Developer Credits Removed -->
+                © 2026 Zhvilluar nga VEROS
             </div>
         </div>
 
@@ -391,23 +375,18 @@
                     </div>
 
                     <div class="md:col-span-2 mt-8 pt-8 border-t border-gray-100">
-                        <div class="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
-                            <div class="flex-grow">
+                        <div class="mb-6">
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest">EMRI
+                                    I TEKNIKUT</label>
                                 <label
-                                    class="block text-[10px] font-black text-gray-400 uppercase mb-2 tracking-widest">EMRI
-                                    I
-                                    TEKNIKUT</label>
-                                <input type="text" id="f-tekniku-emri"
-                                    class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl font-bold">
-                            </div>
-                            <div class="flex items-center pb-3">
-                                <label
-                                    class="flex items-center gap-2 cursor-pointer p-3 bg-gray-50 rounded-xl border border-gray-200 hover:bg-gray-100 transition-colors shadow-sm">
-                                    <input type="checkbox" id="f-shfaq-vulen" class="w-5 h-5 accent-green-600" checked>
-                                    <span class="text-[11px] font-black uppercase text-gray-600 select-none">Shfaq
-                                        Vulën</span>
+                                    class="flex items-center gap-2 cursor-pointer bg-green-50 px-3 py-1 rounded-lg border border-green-100 hover:bg-green-100 transition-colors">
+                                    <input type="checkbox" id="f-shfaq-vulen" class="w-4 h-4 accent-green-600" checked>
+                                    <span class="text-[10px] font-black uppercase text-gray-600">Shfaq Vulën</span>
                                 </label>
                             </div>
+                            <input type="text" id="f-tekniku-emri"
+                                class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl font-bold">
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div>
@@ -806,6 +785,7 @@
                 tel: document.getElementById('f-tel').value,
                 email: document.getElementById('f-email').value,
                 tekniku_emri: document.getElementById('f-tekniku-emri').value,
+                shfaq_vulen: document.getElementById('f-shfaq-vulen').checked,
                 shenime: document.getElementById('f-shenime').value,
                 cmimi: document.getElementById('f-cmimi').value,
                 sherbimet: Array.from(document.querySelectorAll('.sh-check:checked')).map(c => c.value),
@@ -814,7 +794,6 @@
                 preparatet: preps,
                 sig_tekniku: (padTekniku && !padTekniku.isEmpty()) ? padTekniku.toDataURL('image/png') : (document.getElementById('sig-tekniku').dataset.latest || null),
                 sig_klienti: (padKlienti && !padKlienti.isEmpty()) ? padKlienti.toDataURL('image/png') : (document.getElementById('sig-klienti').dataset.latest || null),
-                shfaq_vulen: document.getElementById('f-shfaq-vulen').checked,
                 te_dhenat_e_userit: currentUser ? (currentUser.displayName || currentUser.email) : 'Sistemi',
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             };
@@ -858,9 +837,7 @@
             document.getElementById('f-data').value = tani.toISOString().split('T')[0];
             document.getElementById('f-ora').value = tani.toTimeString().slice(0, 5);
             document.getElementById('f-nr-v').value = getNextCertNumber();
-            document.getElementById('f-nr-v').value = getNextCertNumber();
             document.getElementById('f-shenime').value = DEFAULT_NOTE;
-            document.getElementById('f-shfaq-vulen').checked = true;
 
             document.getElementById('dashboard-view').classList.add('hidden');
             document.getElementById('list-view').classList.add('hidden');
@@ -884,6 +861,7 @@
             if (padKlienti) padKlienti.clear();
             document.getElementById('custom-prep-container').innerHTML = "";
             FIXED_PREPS.forEach(p => togglePrepRow(p.replace(/\s/g, '_'), false));
+            document.getElementById('f-shfaq-vulen').checked = true;
         }
 
         function editDoc(id, silent = false) {
@@ -902,7 +880,7 @@
             document.getElementById('f-tekniku-emri').value = d.tekniku_emri || "";
             document.getElementById('f-shenime').value = d.shenime || "";
             document.getElementById('f-cmimi').value = d.cmimi || "";
-            document.getElementById('f-shfaq-vulen').checked = (d.shfaq_vulen !== false);
+            document.getElementById('f-shfaq-vulen').checked = (d.shfaq_vulen !== undefined) ? d.shfaq_vulen : true;
 
             d.sherbimet?.forEach(v => { const cb = Array.from(document.querySelectorAll('.sh-check')).find(c => c.value === v); if (cb) cb.checked = true; });
             d.pestat?.forEach(v => { const cb = Array.from(document.querySelectorAll('.pest-check')).find(c => c.value === v); if (cb) cb.checked = true; });
@@ -1169,12 +1147,12 @@
                         <div class="border-2 border-black p-2.5 space-y-1.5 mb-2 rounded-xl bg-white">
                             <div class="flex items-end"><span class="font-black w-24 uppercase text-[11px] text-gray-400">Klienti:</span><span class="doc-line flex-1 font-black uppercase px-2 text-[14px] border-b border-gray-100">${d.klienti}</span></div>
                             <div class="flex items-end"><span class="font-black w-24 uppercase text-[11px] text-gray-400">Adresa:</span><span class="doc-line flex-1 font-bold uppercase px-2 text-[13px] border-b border-gray-100">${d.adresa || ''}</span></div>
-                            <div class="grid grid-cols-3 gap-3 mt-1">
+                            <div class="grid grid-cols-2 gap-3 mt-1">
                                 <div class="flex items-end"><span class="font-black w-12 uppercase text-[10px] text-gray-400">NUI:</span><span class="doc-line flex-1 font-bold px-2 border-b border-gray-100">${d.nui || ''}</span></div>
                                 <div class="flex items-end"><span class="font-black w-12 uppercase text-[10px] text-gray-400">M2:</span><span class="doc-line flex-1 font-bold px-2 border-b border-gray-100">${d.m2 || ''}</span></div>
                                 <div class="flex items-end"><span class="font-black w-12 uppercase text-[10px] text-gray-400">Tel:</span><span class="doc-line flex-1 font-bold px-2 border-b border-gray-100">${d.tel || ''}</span></div>
+                                <div class="flex items-end"><span class="font-black w-12 uppercase text-[10px] text-gray-400">Email:</span><span class="doc-line flex-1 font-bold px-2 border-b border-gray-100 truncate text-[12px]">${d.email || ''}</span></div>
                             </div>
-                            <div class="flex items-end mt-1"><span class="font-black w-12 uppercase text-[10px] text-gray-400">Email:</span><span class="doc-line flex-1 font-bold px-2 border-b border-gray-100">${d.email || ''}</span></div>
                         </div>
 
                         <!-- SERVICES & PESTS -->
@@ -1235,7 +1213,7 @@
                                 <div class="h-10 flex items-center justify-center mb-1">
                                      ${d.sig_tekniku ? `<img src="${d.sig_tekniku}" class="h-10 object-contain" style="filter: brightness(0.8) contrast(1.2);">` : (document.getElementById('sig-tekniku')?.dataset.latest ? `<img src="${document.getElementById('sig-tekniku').dataset.latest}" class="h-10 object-contain" style="filter: brightness(0.8) contrast(1.2);">` : '')}
                                 </div>
-                                ${(d.shfaq_vulen !== false) ? `<img src="https://i.imgur.com/6VuXLnd.png" class="absolute top-[-20px] left-1/2 -translate-x-1/2 w-[105px] h-auto mix-blend-multiply opacity-60 z-10" alt="Vula">` : ''}
+                                ${(d.shfaq_vulen !== false) ? `<img src="https://i.imgur.com/6VuXLnd.png" class="absolute top-[-20px] left-1/2 -translate-x-1/2 w-20 h-auto mix-blend-multiply opacity-60 z-10" alt="Vula">` : ''}
                                 <div class="w-full border-t border-black pt-1 uppercase text-black font-black text-[12px]">TEKNIKU</div>
                                 ${d.tekniku_emri ? `<div class="text-[10px] text-gray-400 font-bold">${d.tekniku_emri}</div>` : ''}
                             </div>
@@ -1328,22 +1306,34 @@
                 const pdfBlob = await html2pdf().from(actualPrintContainer).set(opt).output('blob');
                 console.log('PDF Blob created, size:', pdfBlob.size);
 
-                // Final "Open-to-Share" Method (iOS Fix)
-                // We use html2pdf to get the PDF object
-                // Then open it in a new tab using the native Blob/PDF viewer
+                // CRITICAL: Wait 2 seconds to ensure phone processes the graphics fully
+                console.log('Waiting 2 seconds before sharing...');
+                await new Promise(r => setTimeout(r, 2000));
 
-                const worker = html2pdf().from(actualPrintContainer).set(opt).toPdf();
+                // Create File Object with correct filename
+                const file = new File([pdfBlob], filename, { type: 'application/pdf' });
+                console.log('File Object created:', file.name, 'Size:', file.size);
 
-                worker.get('pdf').then(function (pdf) {
-                    // For 'Dërgo' action, show the instruction alert
-                    if (action === 'share') {
-                        alert('Vërtetimi po hapet.\n\nPërdorni butonin Share (katrori me shigjetë) në fund të ekranit për ta dërguar si attachment në Gmail.');
-                    }
-
-                    // Open in new tab (Works on iOS as "Preview")
-                    window.open(pdf.output('bloburl'), '_blank');
-                });
-
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    console.log('Opening share menu...');
+                    await navigator.share({
+                        files: [file],
+                        title: filename,
+                        text: 'Vertetim per kryerjen e sherbimeve te DDD-se'
+                    });
+                    console.log('Share completed successfully');
+                } else {
+                    // Fallback: Download first, then Alert, then Mailto
+                    console.log('Share API not available, falling back to download');
+                    html2pdf().from(actualPrintContainer).set(opt).save();
+                    alert("Vërtetimi u ruajt në telefon. Tani mund ta dërgoni.");
+                    const triggerMailto = () => {
+                        const subject = encodeURIComponent("Vertetim per kryerjen e sherbimeve te DDD-se");
+                        const body = encodeURIComponent("I nderuar klient, bashkangjitur gjeni vërtetimin e shërbimit DDD nga Ekologjia DDD.");
+                        window.location.href = `mailto:${clientEmail}?subject=${subject}&body=${body}`;
+                    };
+                    setTimeout(triggerMailto, 1000);
+                }
             } catch (err) {
                 console.error("Share error:", err);
                 alert("Gabim gjatë procesimit: " + err.message);

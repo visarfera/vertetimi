@@ -143,7 +143,7 @@
             </div>
             <div class="mb-10 text-center mt-10">
                 <h1 class="text-4xl font-black text-gray-900 italic tracking-tighter mb-2">EKOLOGJIA <span
-                        class="text-green-600">DDD</span></h1>
+                        class="text-green-600">SHPK</span></h1>
                 <p class="text-gray-500 font-medium text-lg">Paneli i Kontrollit</p>
             </div>
 
@@ -570,9 +570,41 @@
         // --- FIREBASE SYNC ---
         function initRealtimeListeners() {
             // Certificates
-            firestore.collection('vertetimet').orderBy('id', 'desc').onSnapshot((snapshot) => {
+            // Certificates
+            // We fetch ALL docs and sort client-side to handle mixed data (some have 'createdAt', some don't)
+            firestore.collection('vertetimet').onSnapshot((snapshot) => {
                 db = [];
-                snapshot.forEach((doc) => db.push(doc.data()));
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    // Fallback ID if missing
+                    if (!data.id) data.id = parseInt(doc.id);
+                    db.push(data);
+                });
+
+                // Sorting: Semantic (Year Desc > Number Desc)
+                // Format: "Nr. 150/26"
+                db.sort((a, b) => {
+                    const parseNr = (str) => {
+                        if (!str) return { year: 0, num: 0 };
+                        const parts = str.match(/Nr\.\s*(\d+)\/(\d+)/);
+                        if (!parts) return { year: 0, num: 0 };
+                        return { num: parseInt(parts[1]), year: parseInt(parts[2]) };
+                    };
+
+                    const valA = parseNr(a.nr_v);
+                    const valB = parseNr(b.nr_v);
+
+                    // 1. Compare Years (Desc)
+                    // Assuming '26' means 2026.
+                    if (valB.year !== valA.year) return valB.year - valA.year;
+
+                    // 2. Compare Numbers (Desc)
+                    if (valB.num !== valA.num) return valB.num - valA.num;
+
+                    // 3. Fallback to ID/Timestamp
+                    return (b.id || 0) - (a.id || 0);
+                });
+
                 if (currentUser) { // Only render if logged in
                     renderList();
                     updateDashboardCount();
@@ -795,7 +827,8 @@
                 sig_tekniku: (padTekniku && !padTekniku.isEmpty()) ? padTekniku.toDataURL('image/png') : (document.getElementById('sig-tekniku').dataset.latest || null),
                 sig_klienti: (padKlienti && !padKlienti.isEmpty()) ? padKlienti.toDataURL('image/png') : (document.getElementById('sig-klienti').dataset.latest || null),
                 te_dhenat_e_userit: currentUser ? (currentUser.displayName || currentUser.email) : 'Sistemi',
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                createdAt: firebase.firestore.FieldValue.serverTimestamp() // NEW field for explicit sorting requirement
             };
 
             const btn = document.querySelector('button[onclick="saveData()"]');
@@ -1213,7 +1246,7 @@
                                 <div class="h-10 flex items-center justify-center mb-1">
                                      ${d.sig_tekniku ? `<img src="${d.sig_tekniku}" class="h-10 object-contain" style="filter: brightness(0.8) contrast(1.2);">` : (document.getElementById('sig-tekniku')?.dataset.latest ? `<img src="${document.getElementById('sig-tekniku').dataset.latest}" class="h-10 object-contain" style="filter: brightness(0.8) contrast(1.2);">` : '')}
                                 </div>
-                                ${(d.shfaq_vulen !== false) ? `<img src="https://i.imgur.com/6VuXLnd.png" class="absolute top-[-20px] left-1/2 -translate-x-1/2 w-20 h-auto mix-blend-multiply opacity-60 z-10" alt="Vula">` : ''}
+                                ${(d.shfaq_vulen !== false) ? `<img src="https://i.imgur.com/6VuXLnd.png" class="absolute top-[-30px] left-1/2 -translate-x-1/2 w-28 h-auto mix-blend-multiply opacity-60 z-10" alt="Vula">` : ''}
                                 <div class="w-full border-t border-black pt-1 uppercase text-black font-black text-[12px]">TEKNIKU</div>
                                 ${d.tekniku_emri ? `<div class="text-[10px] text-gray-400 font-bold">${d.tekniku_emri}</div>` : ''}
                             </div>
@@ -1314,8 +1347,11 @@
                 const file = new File([pdfBlob], filename, { type: 'application/pdf' });
                 console.log('File Object created:', file.name, 'Size:', file.size);
 
+
+
+                // Validation for Web Share API V2
                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    console.log('Opening share menu...');
+                    console.log('navigator.canShare passed. Sharing...');
                     await navigator.share({
                         files: [file],
                         title: filename,
@@ -1323,16 +1359,8 @@
                     });
                     console.log('Share completed successfully');
                 } else {
-                    // Fallback: Download first, then Alert, then Mailto
-                    console.log('Share API not available, falling back to download');
-                    html2pdf().from(actualPrintContainer).set(opt).save();
-                    alert("Vërtetimi u ruajt në telefon. Tani mund ta dërgoni.");
-                    const triggerMailto = () => {
-                        const subject = encodeURIComponent("Vertetim per kryerjen e sherbimeve te DDD-se");
-                        const body = encodeURIComponent("I nderuar klient, bashkangjitur gjeni vërtetimin e shërbimit DDD nga Ekologjia DDD.");
-                        window.location.href = `mailto:${clientEmail}?subject=${subject}&body=${body}`;
-                    };
-                    setTimeout(triggerMailto, 1000);
+                    console.warn('navigator.canShare returned false or API unavailable.');
+                    throw new Error("Pajisja juaj nuk mbështet shpërndarjen e drejtpërdrejtë të skedarëve PDF.");
                 }
             } catch (err) {
                 console.error("Share error:", err);

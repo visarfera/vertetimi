@@ -612,10 +612,14 @@
                 }
             });
 
-            // Clients
+            // Clients - Store with Firestore Doc ID
             firestore.collection('klientet').onSnapshot((snapshot) => {
                 clientsDb = [];
-                snapshot.forEach((doc) => clientsDb.push(doc.data()));
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    data._docId = doc.id; // Store Firestore document ID
+                    clientsDb.push(data);
+                });
                 updateClientDatalist();
                 if (!document.getElementById('clients-mgmt-view').classList.contains('hidden')) {
                     renderClientsTable();
@@ -853,14 +857,27 @@
                 alert("Gabim gjatë ruajtjes: " + e.message);
             });
 
-            // Auto-save client if new
-            if (doc.nui && !clientsDb.some(c => c.nui === doc.nui)) {
-                saveNewClientDirectly({ klienti: doc.klienti, adresa: doc.adresa, nui: doc.nui, m2: doc.m2, tel: doc.tel, email: doc.email });
+            // Auto-save client if new (Name + Address uniqueness)
+            const clientKey = `${doc.klienti}_${doc.adresa}`.toUpperCase().trim();
+            const existingClient = clientsDb.find(c =>
+                `${c.klienti}_${c.adresa}`.toUpperCase().trim() === clientKey
+            );
+
+            if (!existingClient && doc.klienti && doc.adresa) {
+                saveNewClientDirectly({
+                    klienti: doc.klienti,
+                    adresa: doc.adresa,
+                    nui: doc.nui,
+                    m2: doc.m2,
+                    tel: doc.tel,
+                    email: doc.email
+                });
             }
         }
 
         function saveNewClientDirectly(c) {
-            firestore.collection('klientet').doc(c.nui).set(c);
+            // Use auto-generated ID for true uniqueness
+            firestore.collection('klientet').add(c);
         }
 
         function createNew() {
@@ -898,6 +915,10 @@
         }
 
         function editDoc(id, silent = false) {
+            if (currentRole !== 'admin' && !silent) {
+                alert("Vetëm administratorët mund të editojnë vërtetimet.");
+                return;
+            }
             const d = db.find(x => x.id === id);
             if (!d) return;
             currentId = id;
@@ -910,6 +931,7 @@
             document.getElementById('f-nui').value = d.nui || "";
             document.getElementById('f-m2').value = d.m2 || "";
             document.getElementById('f-tel').value = d.tel || "";
+            document.getElementById('f-email').value = d.email || "";
             document.getElementById('f-tekniku-emri').value = d.tekniku_emri || "";
             document.getElementById('f-shenime').value = d.shenime || "";
             document.getElementById('f-cmimi').value = d.cmimi || "";
@@ -946,6 +968,10 @@
         }
 
         function deleteDoc(id) {
+            if (currentRole !== 'admin') {
+                alert("Vetëm administratorët mund të fshijnë vërtetimet.");
+                return;
+            }
             if (!confirm("A jeni i sigurt që dëshironi të fshini këtë vërtetim? Ky veprim nuk mund të kthehet.")) return;
             firestore.collection('vertetimet').doc(String(id)).delete()
                 .then(() => alert("Vërtetimi u fshie me sukses!"))
@@ -1011,7 +1037,9 @@
             if (showOnlyExpired) filtered = filtered.filter(d => monthsDiff(d.data) >= 6);
             document.getElementById('btn-panic').textContent = showOnlyExpired ? 'Filtro: Skaduar' : 'Filtro: Të Gjitha';
 
-            document.getElementById('docs-list').innerHTML = filtered.map(d => `
+            document.getElementById('docs-list').innerHTML = filtered.map(d => {
+                const isAdmin = currentRole === 'admin';
+                return `
                 <tr class="border-b border-gray-100 hover:bg-green-50/40 transition-colors group">
                     <td class="p-4"><span class="bg-green-100 text-green-800 px-2 py-1 rounded text-[10px] font-black">${d.nr_v}</span></td>
                     <td class="p-4 font-black text-gray-800 text-xs uppercase">${d.klienti}</td>
@@ -1021,12 +1049,13 @@
                     <td class="p-4 text-center">
                         <div class="flex items-center justify-center gap-4">
                             <button onclick="triggerAction('${d.id}', 'view')" class="text-blue-500 hover:text-blue-700 transition-all hover:scale-125" title="Shiko PDF"><i class="fas fa-file-pdf"></i></button>
-                            <button onclick="editDoc(${d.id})" class="text-amber-500 hover:text-amber-700 transition-all hover:scale-125" title="Edito"><i class="fas fa-pencil-alt"></i></button>
+                            ${isAdmin ? `<button onclick="editDoc(${d.id})" class="text-amber-500 hover:text-amber-700 transition-all hover:scale-125" title="Edito"><i class="fas fa-pencil-alt"></i></button>` : ''}
                             <button onclick="triggerAction('${d.id}', 'share')" class="text-green-600 hover:text-green-800 transition-all hover:scale-125" title="Dërgo në Email"><i class="fas fa-share-alt"></i></button>
-                            <button onclick="deleteDoc(${d.id})" class="text-red-400 hover:text-red-600 transition-all hover:scale-125" title="Fshij"><i class="fas fa-trash-alt"></i></button>
+                            ${isAdmin ? `<button onclick="deleteDoc(${d.id})" class="text-red-400 hover:text-red-600 transition-all hover:scale-125" title="Fshij"><i class="fas fa-trash-alt"></i></button>` : ''}
                         </div>
                     </td>
-                </tr>`).join('');
+                </tr>`;
+            }).join('');
         }
 
         function updateDashboardCount() {
@@ -1051,41 +1080,52 @@
                 container.innerHTML = '<div class="text-center text-gray-400 font-bold py-10">Nuk ka klientë.</div>';
                 return;
             }
-            container.innerHTML = clientsDb.map(c => `
+            container.innerHTML = clientsDb.map(c => {
+                const isAdmin = currentRole === 'admin';
+                return `
                 <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 flex justify-between items-center">
                     <div>
                         <div class="font-black text-blue-900 uppercase">${c.klienti}</div>
-                        <div class="text-xs text-gray-500 font-bold">NUI: ${c.nui} | ${c.adresa}</div>
+                        <div class="text-xs text-gray-500 font-bold">NUI: ${c.nui || 'N/A'} | ${c.adresa}</div>
                         ${c.email ? `<div class="text-[10px] text-blue-600 font-bold uppercase mt-1">${c.email}</div>` : ''}
                     </div>
                     <div class="flex gap-2">
-                        ${currentRole === 'admin' ? `
-                        <button onclick="showClientForm('${c.nui}')" class="bg-amber-100 text-amber-700 px-4 py-2 rounded-lg font-bold text-xs">EDITO</button>
-                        <button onclick="deleteClient('${c.nui}')" class="bg-red-100 text-red-700 px-4 py-2 rounded-lg font-bold text-xs">FSHIJ</button>
+                        ${isAdmin ? `
+                        <button onclick="showClientForm('${c._docId}')" class="bg-amber-100 text-amber-700 px-4 py-2 rounded-lg font-bold text-xs">EDITO</button>
+                        <button onclick="deleteClient('${c._docId}')" class="bg-red-100 text-red-700 px-4 py-2 rounded-lg font-bold text-xs">FSHIJ</button>
                         ` : '<span class="text-[10px] text-gray-400 font-black uppercase italic">Vetëm Lexim</span>'}
                     </div>
-                </div>`).join('');
+                </div>`;
+            }).join('');
         }
 
-        function deleteClient(nui) {
+        function deleteClient(docId) {
+            if (currentRole !== 'admin') {
+                alert("Vetëm administratorët mund të fshijnë klientët.");
+                return;
+            }
             if (confirm("Fshij klientin?")) {
-                firestore.collection('klientet').doc(nui).delete();
+                firestore.collection('klientet').doc(docId).delete();
             }
         }
 
-        function showClientForm(nui = null) {
+        function showClientForm(docId = null) {
+            if (docId && currentRole !== 'admin') {
+                alert("Vetëm administratorët mund të editojnë klientët ekzistues.");
+                return;
+            }
             ['dashboard-view', 'list-view', 'edit-view', 'print-view', 'client-view', 'clients-mgmt-view'].forEach(id => document.getElementById(id).classList.add('hidden'));
             document.getElementById('client-view').classList.remove('hidden');
             ['c-klienti', 'c-nui', 'c-adresa', 'c-m2', 'c-tel', 'c-email'].forEach(id => document.getElementById(id).value = '');
-            editingClientNui = nui;
-            if (nui) {
-                const c = clientsDb.find(x => x.nui === nui);
+            editingClientNui = docId;
+            if (docId) {
+                const c = clientsDb.find(x => x._docId === docId);
                 if (c) {
                     document.getElementById('c-klienti').value = c.klienti;
-                    document.getElementById('c-nui').value = c.nui;
+                    document.getElementById('c-nui').value = c.nui || '';
                     document.getElementById('c-adresa').value = c.adresa;
-                    document.getElementById('c-m2').value = c.m2;
-                    document.getElementById('c-tel').value = c.tel;
+                    document.getElementById('c-m2').value = c.m2 || '';
+                    document.getElementById('c-tel').value = c.tel || '';
                     document.getElementById('c-email').value = c.email || '';
                 }
             }
@@ -1104,12 +1144,27 @@
                 email: document.getElementById('c-email').value.trim().toLowerCase()
             };
 
-            if (!c.klienti || !c.nui) return alert("Plotësoni emrin dhe NUI!");
+            if (!c.klienti || !c.adresa) return alert("Plotësoni emrin dhe adresën!");
+
+            // Check for duplicate Name+Address (excluding current edit)
+            const clientKey = `${c.klienti}_${c.adresa}`.toUpperCase().trim();
+            const duplicate = clientsDb.find(existing =>
+                `${existing.klienti}_${existing.adresa}`.toUpperCase().trim() === clientKey &&
+                existing._docId !== editingClientNui
+            );
+
+            if (duplicate) {
+                return alert("Ky klient me këtë adresë ekziston tashmë!");
+            }
 
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Duke ruajtur...';
 
-            firestore.collection('klientet').doc(c.nui).set(c).then(() => {
+            const savePromise = editingClientNui
+                ? firestore.collection('klientet').doc(editingClientNui).set(c)
+                : firestore.collection('klientet').add(c);
+
+            savePromise.then(() => {
                 alert("Klienti u ruajt me sukses!");
                 btn.disabled = false;
                 btn.innerHTML = originalHtml;
@@ -1246,7 +1301,7 @@
                                 <div class="h-10 flex items-center justify-center mb-1">
                                      ${d.sig_tekniku ? `<img src="${d.sig_tekniku}" class="h-10 object-contain" style="filter: brightness(0.8) contrast(1.2);">` : (document.getElementById('sig-tekniku')?.dataset.latest ? `<img src="${document.getElementById('sig-tekniku').dataset.latest}" class="h-10 object-contain" style="filter: brightness(0.8) contrast(1.2);">` : '')}
                                 </div>
-                                ${(d.shfaq_vulen !== false) ? `<img src="https://i.imgur.com/6VuXLnd.png" class="absolute top-[-30px] left-1/2 -translate-x-1/2 w-28 h-auto mix-blend-multiply opacity-60 z-10" alt="Vula">` : ''}
+                                ${(d.shfaq_vulen !== false) ? `<img src="https://i.imgur.com/6VuXLnd.png" class="absolute bottom-[-10px] right-[-60px] w-36 h-auto mix-blend-multiply opacity-60 z-10" alt="Vula">` : ''}
                                 <div class="w-full border-t border-black pt-1 uppercase text-black font-black text-[12px]">TEKNIKU</div>
                                 ${d.tekniku_emri ? `<div class="text-[10px] text-gray-400 font-bold">${d.tekniku_emri}</div>` : ''}
                             </div>
@@ -1335,32 +1390,25 @@
                 }
 
                 // For sharing: Generate PDF Blob with proper async/await
-                console.log('Starting PDF generation...');
                 const pdfBlob = await html2pdf().from(actualPrintContainer).set(opt).output('blob');
-                console.log('PDF Blob created, size:', pdfBlob.size);
 
-                // CRITICAL: Wait 2 seconds to ensure phone processes the graphics fully
-                console.log('Waiting 2 seconds before sharing...');
-                await new Promise(r => setTimeout(r, 2000));
+                // Ensure blob is fully ready before creating File
+                if (!pdfBlob || pdfBlob.size === 0) {
+                    throw new Error("PDF generation failed - empty file");
+                }
 
                 // Create File Object with correct filename
                 const file = new File([pdfBlob], filename, { type: 'application/pdf' });
-                console.log('File Object created:', file.name, 'Size:', file.size);
 
-
-
-                // Validation for Web Share API V2
-                if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    console.log('navigator.canShare passed. Sharing...');
+                // Use navigator.share - iOS requires proper file object
+                if (navigator.share) {
                     await navigator.share({
                         files: [file],
                         title: filename,
                         text: 'Vertetim per kryerjen e sherbimeve te DDD-se'
                     });
-                    console.log('Share completed successfully');
                 } else {
-                    console.warn('navigator.canShare returned false or API unavailable.');
-                    throw new Error("Pajisja juaj nuk mbështet shpërndarjen e drejtpërdrejtë të skedarëve PDF.");
+                    throw new Error("Pajisja juaj nuk mbështet shpërndarjen e skedarëve.");
                 }
             } catch (err) {
                 console.error("Share error:", err);

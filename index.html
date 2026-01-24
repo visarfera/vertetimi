@@ -135,7 +135,9 @@
 
         <!-- DASHBOARD VIEW -->
         <div id="dashboard-view" class="min-h-screen flex flex-col items-center justify-center p-6 pb-20">
-            <div class="w-full flex justify-end px-6 absolute top-6">
+            <div class="w-full flex justify-end items-center px-6 absolute top-6">
+                <span id="dash-user-email"
+                    class="text-gray-400 font-bold text-[10px] uppercase tracking-wider mr-4"></span>
                 <button onclick="doLogout()"
                     class="text-gray-400 hover:text-red-500 font-bold text-xs uppercase tracking-widest flex items-center gap-2 transition-colors">
                     <i class="fas fa-sign-out-alt"></i> Dil
@@ -166,14 +168,7 @@
                     <span class="text-2xl font-black uppercase tracking-wide">Menaxho Klientët</span>
                 </button>
 
-                <button onclick="showClientForm()" id="btn-user-add-client"
-                    class="group bg-gradient-to-br from-blue-600 to-blue-700 text-white p-8 rounded-3xl shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all flex flex-col items-center justify-center gap-4 border-b-4 border-blue-900">
-                    <div
-                        class="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mb-2 group-hover:bg-white/30 transition-colors">
-                        <i class="fas fa-user-plus text-4xl"></i>
-                    </div>
-                    <span class="text-2xl font-black uppercase tracking-wide">Shto Klient të Ri</span>
-                </button>
+
 
                 <button onclick="showPanicList()" id="dash-panic-btn"
                     class="group bg-gradient-to-br from-red-600 to-red-700 text-white p-8 rounded-3xl shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all flex flex-col items-center justify-center gap-4 border-b-4 border-red-900 relative overflow-hidden">
@@ -195,8 +190,12 @@
                     <span class="text-2xl font-black uppercase tracking-wide">Vërtetimet e Lëshuara</span>
                 </button>
             </div>
-            <div class="mt-12 text-[9px] text-[#a0a0a0] font-bold uppercase tracking-widest pb-4">
-                © 2026 Zhvilluar nga VEROS
+            <div
+                class="mt-12 flex items-center justify-center gap-1.5 text-[9px] text-[#a0a0a0] font-bold uppercase tracking-widest pb-4">
+                <span>© 2026 Zhvilluar nga </span>
+                <img src="https://i.imgur.com/oksiI1G.png"
+                    class="h-4 w-auto opacity-70 hover:opacity-100 transition-opacity" alt="VEROS Logo">
+                <span>VEROS</span>
             </div>
         </div>
 
@@ -1039,8 +1038,9 @@
 
             document.getElementById('docs-list').innerHTML = filtered.map(d => {
                 const isAdmin = currentRole === 'admin';
+                const isExpired = monthsDiff(d.data) >= 6;
                 return `
-                <tr class="border-b border-gray-100 hover:bg-green-50/40 transition-colors group">
+                <tr class="${isExpired ? 'bg-red-50 border-b border-red-200 hover:bg-red-100' : 'border-b border-gray-100 hover:bg-green-50/40'} transition-colors group">
                     <td class="p-4"><span class="bg-green-100 text-green-800 px-2 py-1 rounded text-[10px] font-black">${d.nr_v}</span></td>
                     <td class="p-4 font-black text-gray-800 text-xs uppercase">${d.klienti}</td>
                     <td class="p-4 font-bold text-gray-600 text-xs">${d.data.split('-').reverse().join('/')}</td>
@@ -1424,6 +1424,13 @@
             // Attach Login Listener
             document.getElementById('login-btn').onclick = doLogin;
 
+            // Enable Enter key for login
+            ['login-email', 'login-password'].forEach(id => {
+                document.getElementById(id).addEventListener('keyup', function (event) {
+                    if (event.key === 'Enter') doLogin();
+                });
+            });
+
             // Auth Listener
             firebase.auth().onAuthStateChanged(async (user) => {
                 if (!user) {
@@ -1433,6 +1440,7 @@
                     return;
                 }
                 currentUser = user;
+                if (document.getElementById('dash-user-email')) document.getElementById('dash-user-email').textContent = user.email;
 
                 // Load role from Firestore:
                 const snap = await firestore.collection('users').doc(user.uid).get();

@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="sq">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Sistemi DOCTOR EXTERMINATOR - Offline</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        input,
+        select,
+        textarea {
+            font-size: 16px !important;
+        }
+
+        .doc-line {
+            border-bottom: 1px solid #000;
+            display: inline-block;
+            padding: 0 4px;
+            min-height: 1.2em;
+        }
+
+        .checkbox-box {
+            width: 14px;
+            height: 14px;
+            border: 1px solid black;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 6px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        #pdf-render-zone {
+            border: 2px solid #000;
+        }
+
+        /* Remove arrows from number input */
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+        }
+
+        /* Black & White Theme Overrides */
+        .btn-black {
+            background-color: #000000;
+            color: white;
+        }
+
+        .btn-black:hover {
+            background-color: #333333;
+        }
+
+        .border-black-theme {
+            border-color: #000000;
+        }
+
+        .text-black-theme {
+            color: #000000;
+        }
+
+        .accent-black-theme {
+            accent-color: #000000;
+        }
+    </style>
+</head>
+
+<body class="bg-white min-h-screen text-black">
+    <div id="app">
+        <!-- DASHBOARD VIEW -->
+        <div id="dashboard-view" class="min-h-screen flex flex-col items-center justify-center p-6 pb-20 bg-white">
+            <div class="mb-12 text-center">
+                <img src="https://i.imgur.com/D6dqEHI.png" crossorigin="anonymous" alt="Logo" class="w-64 mx-auto mb-8">
+                <h1 class="text-3xl font-black text-black tracking-tighter mb-2 uppercase">DOCTOR EXTERMINATOR DDD SHPK
+                </h1>
+                <p class="text-gray-500 font-bold text-lg uppercase tracking-widest">Paneli i Kontrollit</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl">
+                <button onclick="createNew()"
+                    class="group bg-black text-white p-8 rounded-3xl shadow-2xl hover:scale-[1.02] transition-all flex flex-col items-center justify-center gap-4 border-b-4 border-gray-800">
+                    <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center"><i
+                            class="fas fa-plus text-3xl"></i></div>
+                    <span class="text-xl font-black uppercase">+ Shto Vërtetim</span>
+                </button>
+                <button onclick="showClientManagement()"
+                    class="group bg-gray-900 text-white p-8 rounded-3xl shadow-2xl hover:scale-[1.02] transition-all flex flex-col items-center justify-center gap-4 border-b-4 border-black">
+                    <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center"><i
+                            class="fas fa-users-cog text-3xl"></i></div>
+                    <span class="text-xl font-black uppercase">Menaxho Klientët</span>
+                </button>
+
+                <!-- RED ALERT BUTTON -->
+                <button onclick="showPanicList()"
+                    class="group bg-[#dc3545] text-white p-8 rounded-3xl shadow-2xl hover:scale-[1.02] transition-all flex flex-col items-center justify-center gap-4 relative border-b-4 border-red-900">
+                    <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center"><i
+                            class="fas fa-exclamation-triangle text-3xl text-white"></i></div>
+                    <span class="text-xl font-black uppercase">⚠️ Ri-intervenim</span>
+                    <span id="dash-expired-count"
+                        class="absolute top-6 right-6 bg-white text-[#dc3545] font-black px-3 py-1 rounded-full text-sm shadow-lg">0</span>
+                </button>
+
+                <button onclick="showList()"
+                    class="group bg-gray-700 text-white p-8 rounded-3xl shadow-2xl hover:scale-[1.02] transition-all flex flex-col items-center justify-center gap-4 border-b-4 border-black">
+                    <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center"><i
+                            class="fas fa-folder-open text-3xl"></i></div>
+                    <span class="text-xl font-black uppercase">Vërtetimet e Lëshuara</span>
+                </button>
+            </div>
+
+            <div
+                class="mt-16 flex items-center justify-center gap-2 text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
+                <span>© 2026 Zhvilluar nga</span>
+                <img src="https://i.imgur.com/oksiI1G.png" style="height: 22px;" alt="VEROS">
+                <span>VEROS</span>
+            </div>
+        </div>
+
+        <!-- LIST VIEW -->
+        <div id="list-view" class="hidden max-w-5xl mx-auto py-10 px-4 bg-white min-h-screen">
+            <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+                <button onclick="showDashboard()"
+                    class="bg-black text-white px-8 py-3 rounded-xl font-black uppercase transition-all shadow-lg flex items-center gap-2 border-b-4 border-gray-800"><i
+                        class="fas fa-arrow-left"></i> Kthehu</button>
+                <input type="text" id="search-input" oninput="renderList()"
+                    class="flex-1 p-4 bg-gray-50 border-2 border-black rounded-2xl font-bold text-lg outline-none focus:bg-white"
+                    placeholder="Kërko klientin...">
+            </div>
+            <div class="overflow-x-auto bg-white rounded-2xl shadow-xl border-2 border-black">
+                <table class="w-full text-left">
+                    <tr class="bg-black text-white text-[11px] uppercase font-black tracking-wider">
+                        <th class="p-4">Nr. Vërtetimit</th>
+                        <th class="p-4">Klienti</th>
+                        <th class="p-4">Data</th>
+                        <th class="p-4">Çmimi</th>
+                        <th class="p-4 text-center">Veprimet</th>
+                    </tr>
+                    <tbody id="docs-list" class="text-sm font-bold"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- EDIT VIEW -->
+        <div id="edit-view" class="hidden bg-white min-h-screen pb-20">
+            <div class="border-b-2 border-black sticky top-0 bg-white/95 backdrop-blur-md z-10 px-6 py-4 shadow-sm">
+                <div class="max-w-6xl mx-auto flex justify-between items-center">
+                    <button onclick="showList()"
+                        class="text-black font-black flex items-center gap-2 uppercase tracking-tight hover:underline"><i
+                            class="fas fa-arrow-left"></i> Anulo</button>
+                    <div class="flex items-center gap-4">
+                        <button onclick="saveData()"
+                            class="bg-black text-white px-8 py-3 rounded-xl font-black shadow-lg uppercase tracking-wide flex items-center gap-2 border-b-4 border-gray-800 active:translate-y-1"><i
+                                class="fas fa-save"></i> RUAJ</button>
+                    </div>
+                </div>
+            </div>
+            <div class="max-w-6xl mx-auto p-6 space-y-8">
+                <!-- Info Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 bg-gray-50 p-6 rounded-2xl border-2 border-black">
+                    <div><label
+                            class="block text-[10px] font-black text-black uppercase mb-2 tracking-wider">Data</label><input
+                            type="date" id="f-data"
+                            class="w-full p-3 border-2 border-gray-300 rounded-xl font-bold focus:border-black outline-none">
+                    </div>
+                    <div><label
+                            class="block text-[10px] font-black text-black uppercase mb-2 tracking-wider">Ora</label><input
+                            type="time" id="f-ora"
+                            class="w-full p-3 border-2 border-gray-300 rounded-xl font-bold focus:border-black outline-none">
+                    </div>
+                    <div><label class="block text-[10px] font-black text-black uppercase mb-2 tracking-wider">Nr.
+                            Vërtetimit</label><input type="text" id="f-nr-v"
+                            class="w-full p-3 border-2 border-gray-300 rounded-xl font-bold focus:border-black outline-none">
+                    </div>
+                </div>
+
+                <!-- Client Info -->
+                <div class="space-y-4">
+                    <label
+                        class="block text-xs font-black text-black uppercase tracking-widest border-b-2 border-black pb-2">Informacionet
+                        e Klientit</label>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="md:col-span-2 relative">
+                            <label class="block text-[10px] font-bold text-gray-500 mb-1">KLIENTI</label>
+                            <input type="text" id="f-klienti" autocomplete="off"
+                                class="w-full p-4 bg-gray-50 border-2 border-black rounded-xl font-black uppercase outline-none text-lg"
+                                placeholder="Kërko ose shto emrin..." oninput="handleFuzzySearch(this.value)">
+                            <div id="fuzzy-results"
+                                class="hidden absolute left-0 right-0 top-full mt-2 bg-white border-2 border-black rounded-2xl shadow-2xl z-50 max-h-60 overflow-y-auto font-bold uppercase">
+                            </div>
+                        </div>
+                        <div><label class="block text-[10px] font-bold text-gray-500 mb-1">ADRESA</label><input
+                                type="text" id="f-adresa"
+                                class="w-full p-3 bg-white border-2 border-gray-300 rounded-xl font-bold uppercase focus:border-black outline-none">
+                        </div>
+                        <div><label class="block text-[10px] font-bold text-gray-500 mb-1">NUI</label><input type="text"
+                                id="f-nui"
+                                class="w-full p-3 bg-white border-2 border-gray-300 rounded-xl font-bold uppercase focus:border-black outline-none">
+                        </div>
+                        <div><label class="block text-[10px] font-bold text-gray-500 mb-1">E-MAIL
+                                (Opsional)</label><input type="email" id="f-email"
+                                class="w-full p-3 bg-white border-2 border-gray-300 rounded-xl font-bold uppercase focus:border-black outline-none">
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><label class="block text-[10px] font-bold text-gray-500 mb-1">M²</label><input
+                                    type="text" id="f-m2"
+                                    class="w-full p-3 bg-white border-2 border-gray-300 rounded-xl font-bold focus:border-black outline-none">
+                            </div>
+                            <div><label class="block text-[10px] font-bold text-gray-500 mb-1">TEL</label><input
+                                    type="text" id="f-tel"
+                                    class="w-full p-3 bg-white border-2 border-gray-300 rounded-xl font-bold focus:border-black outline-none">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Services -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
+                    <div>
+                        <label
+                            class="block text-xs font-black text-black uppercase tracking-widest border-b-2 border-black pb-2 mb-4">Shërbimet</label>
+                        <div class="grid grid-cols-1 gap-2" id="sh-inputs"></div>
+                    </div>
+                    <div>
+                        <label
+                            class="block text-xs font-black text-black uppercase tracking-widest border-b-2 border-black pb-2 mb-4">Pestat</label>
+                        <div class="grid grid-cols-2 gap-2" id="pest-inputs"></div>
+                    </div>
+                </div>
+
+                <!-- Preps & Methods -->
+                <div class="pt-6 border-t-2 border-gray-100">
+                    <div class="flex justify-between items-center mb-4"><label
+                            class="block text-xs font-black text-black uppercase tracking-widest">Preparatet</label><button
+                            onclick="addNewPrepField()"
+                            class="text-black text-[10px] font-black uppercase hover:underline">+ Shto manual</button>
+                    </div>
+                    <div id="prep-inputs" class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4"></div>
+                    <div id="custom-prep-container" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+                </div>
+
+                <div class="pt-6 border-t-2 border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div><label class="block text-xs font-black text-black uppercase tracking-widest mb-4">Metoda e
+                            Aplikimit</label>
+                        <div class="flex flex-wrap gap-3" id="metoda-inputs"></div>
+                    </div>
+                    <div><label
+                            class="block text-xs font-black text-black uppercase tracking-widest mb-4">Shënime</label><textarea
+                            id="f-shenime"
+                            class="w-full p-3 bg-gray-50 border-2 border-gray-300 rounded-xl h-24 font-bold text-sm focus:border-black outline-none"></textarea>
+                    </div>
+                    <div><label class="block text-xs font-black text-black uppercase tracking-widest mb-4">Çmimi
+                            (€)</label><input type="number" id="f-cmimi"
+                            class="w-full p-4 bg-gray-50 border-2 border-black rounded-xl font-black text-xl"
+                            inputmode="decimal" step="0.01"></div>
+                </div>
+
+                <!-- Signatures -->
+                <div class="pt-8 border-t-2 border-gray-100 space-y-6">
+                    <div class="flex items-end gap-6 justify-between flex-wrap">
+                        <div class="flex-1 min-w-[300px]">
+                            <label class="block text-[10px] font-black text-black uppercase mb-2">Emri i
+                                Teknikut</label>
+                            <input type="text" id="f-tekniku-emri"
+                                class="w-full p-3 bg-gray-50 border-2 border-gray-300 rounded-xl font-bold uppercase focus:border-black outline-none">
+                        </div>
+                        <div class="flex-1 min-w-[300px]">
+                            <label class="block text-[10px] font-black text-black uppercase mb-2">Emri i Pranuesit
+                                (Personi përgjegjës)</label>
+                            <input type="text" id="f-pranuesi-emri"
+                                class="w-full p-3 bg-gray-50 border-2 border-gray-300 rounded-xl font-bold uppercase focus:border-black outline-none">
+                        </div>
+                        <label
+                            class="flex items-center gap-3 cursor-pointer bg-gray-50 px-5 py-3 rounded-xl border-2 border-gray-200 hover:border-black transition-all mb-[1px]">
+                            <input type="checkbox" id="f-stamp-toggle" class="w-5 h-5 accent-black" checked>
+                            <span class="text-xs font-black uppercase select-none">Shfaq Vulën</span>
+                        </label>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div><label class="block text-[10px] font-black text-black uppercase mb-2">Nënshkrimi i
+                                Teknikut</label>
+                            <div class="rounded-xl bg-white h-40 border-2 border-dashed border-black relative"><canvas
+                                    id="sig-tekniku" class="w-full h-full"></canvas></div><button
+                                onclick="clearSig('tekniku')"
+                                class="text-[10px] text-red-600 font-bold mt-2 uppercase">Pastro</button>
+                        </div>
+                        <div><label class="block text-[10px] font-black text-black uppercase mb-2">Nënshkrimi i Klienit
+                                (Pranuesit)</label>
+                            <div class="rounded-xl bg-white h-40 border-2 border-dashed border-black relative"><canvas
+                                    id="sig-klienti" class="w-full h-full"></canvas></div><button
+                                onclick="clearSig('klienti')"
+                                class="text-[10px] text-red-600 font-bold mt-2 uppercase">Pastro</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CLIENT MGMT VIEW -->
+        <div id="clients-mgmt-view" class="hidden bg-white min-h-screen">
+            <div class="border-b-2 border-black sticky top-0 bg-white/95 backdrop-blur-md z-10 px-6 py-4 shadow-sm">
+                <div class="max-w-5xl mx-auto flex justify-between items-center">
+                    <button onclick="showDashboard()"
+                        class="bg-black text-white px-6 py-2 rounded-xl font-bold text-sm uppercase">Kthehu</button>
+                    <span class="font-black text-xl uppercase">Menaxho Klientët</span>
+                    <button onclick="showClientForm()"
+                        class="bg-black text-white px-6 py-2 rounded-xl font-bold text-sm uppercase">Shto
+                        Klient</button>
+                </div>
+            </div>
+            <div class="max-w-5xl mx-auto p-6 grid grid-cols-1 gap-4" id="clients-table-container"></div>
+        </div>
+
+        <!-- CLIENT FORM VIEW -->
+        <div id="client-view" class="hidden bg-white min-h-screen">
+            <div class="border-b-2 border-black sticky top-0 bg-white/95 backdrop-blur-md z-10 px-6 py-4 shadow-sm">
+                <div class="max-w-xl mx-auto flex justify-between items-center">
+                    <button onclick="showClientManagement()" class="text-black font-bold uppercase">Anulo</button>
+                    <button onclick="handleSaveClient()"
+                        class="bg-black text-white px-8 py-2.5 rounded-xl font-black uppercase shadow-lg border-b-4 border-gray-800 active:translate-y-1">Ruaj
+                        Klientin</button>
+                </div>
+            </div>
+            <div class="max-w-xl mx-auto p-6 space-y-4">
+                <input type="text" id="c-klienti"
+                    class="w-full p-3 bg-gray-50 border-2 border-black rounded-xl font-bold uppercase"
+                    placeholder="EMRI I KLIENTIT">
+                <input type="text" id="c-nui"
+                    class="w-full p-3 bg-gray-50 border-2 border-black rounded-xl font-bold uppercase"
+                    placeholder="NUI">
+                <input type="text" id="c-adresa"
+                    class="w-full p-3 bg-gray-50 border-2 border-black rounded-xl font-bold uppercase"
+                    placeholder="ADRESA">
+                <div class="grid grid-cols-2 gap-4"><input type="text" id="c-m2"
+                        class="w-full p-3 bg-gray-50 border-2 border-black rounded-xl font-bold" placeholder="m²"><input
+                        type="text" id="c-tel" class="w-full p-3 bg-gray-50 border-2 border-black rounded-xl font-bold"
+                        placeholder="TEL"></div>
+                <input type="email" id="c-email"
+                    class="w-full p-3 bg-gray-50 border-2 border-black rounded-xl font-bold uppercase"
+                    placeholder="E-MAIL I KLIENTIT">
+            </div>
+        </div>
+
+        <!-- PRINT VIEW -->
+        <div id="print-view" class="hidden fixed inset-0 bg-zinc-900 overflow-auto p-4 z-50">
+            <div class="max-w-[21cm] mx-auto flex justify-between mb-4 sticky top-0 z-10">
+                <button onclick="showList()"
+                    class="bg-white/10 text-white px-6 py-2 rounded-lg font-bold">Mbyll</button>
+                <button id="btn-download-pdf"
+                    class="bg-black text-white px-10 py-2 rounded-lg font-bold shadow-xl border-b-4 border-gray-700 active:translate-y-1">Shkarko
+                    PDF</button>
+            </div>
+            <div id="print-content" class="bg-white w-[21cm] min-h-[29.7cm] mx-auto shadow-2xl"></div>
+        </div>
+    </div>
+
+    <!-- RENDERING ZONE -->
+    <div id="pdf-render-zone"
+        style="position: absolute; left: -9999px; top: -9999px; width: 800px; background: white; pointer-events: none;">
+    </div>
+
+    <script>
+        const SH_TYPES = ["DEZINFEKTIM", "DEZINSEKTIM", "DERATIZIM", "REPELIM", "KONTROLL", "INTERVENIM", "MONITORIMI DHE KONTROLLIMI I DËMTUESVE"];
+        const PEST_TYPES = ["BAKTERE/VIRUSE/FUNGJE/SPORE", "FURRTARE", "BUBRRECA", "MUSHKONJA", "MIZA", "GREJZA", "ÇIMKA", "PLESHTA", "SILVERFISH/MILIPIDE", "BREJTËS", "GJARPËRINJË", "PËLLUMBA"];
+        const METODA_TYPES = ["E LËNGSHME", "E NGURTË", "GRANULA", "PLUHUR", "SHKUMË"];
+        const UNIT_TYPES = ["LITËR", "ML", "GRAM", "KILOGRAM", "COPË", "KUTIA", "NGJITËS"];
+        const FIXED_PREPS = ["DIDECILDIMETHYLAMMONIUM CHLORIDE", "FIPRONIL", "PERMETHRINE", "BRODIFACOUM", "BROMADIOLONE", "CINNAMON OIL"];
+        const DEFAULT_NOTE = "Shërbimi u krye sipas standardeve dhe protokolleve ekologjike të kërkuara për trajtimin e hapësirave.";
+        const LOGO_URL = 'https://i.imgur.com/D6dqEHI.png';
+        const STAMP_URL = 'https://i.imgur.com/pp7n6if.png';
+
+        const CERTS_KEY = 'de_certificates_v1';
+        const CLIENTS_KEY = 'de_clients_v1';
+
+        let db = JSON.parse(localStorage.getItem(CERTS_KEY) || '[]');
+        let clientsDb = JSON.parse(localStorage.getItem(CLIENTS_KEY) || '[]');
+        let currentId = null;
+        let padTekniku, padKlienti;
+
+        function persist() {
+            localStorage.setItem(CERTS_KEY, JSON.stringify(db));
+            localStorage.setItem(CLIENTS_KEY, JSON.stringify(clientsDb));
+        }
+
+        // --- CORE UI ---
+        function showDashboard() {
+            document.querySelectorAll('#app > div').forEach(d => d.classList.add('hidden'));
+            document.getElementById('dashboard-view').classList.remove('hidden');
+            updateDashboardCount();
+        }
+        function showList() {
+            document.querySelectorAll('#app > div').forEach(d => d.classList.add('hidden'));
+            document.getElementById('list-view').classList.remove('hidden');
+            renderList();
+        }
+        function showPanicList() {
+            document.querySelectorAll('#app > div').forEach(d => d.classList.add('hidden'));
+            document.getElementById('list-view').classList.remove('hidden');
+            renderList(true);
+        }
+        function showClientManagement() {
+            document.querySelectorAll('#app > div').forEach(d => d.classList.add('hidden'));
+            document.getElementById('clients-mgmt-view').classList.remove('hidden');
+            renderClientsTable();
+        }
+        function showClientForm(nui = null) {
+            document.querySelectorAll('#app > div').forEach(d => d.classList.add('hidden'));
+            document.getElementById('client-view').classList.remove('hidden');
+            document.querySelectorAll('#client-view input').forEach(i => i.value = '');
+            if (nui) {
+                const c = clientsDb.find(x => x.nui === nui);
+                if (c) {
+                    ['klienti', 'nui', 'adresa', 'm2', 'tel', 'email'].forEach(k => {
+                        const el = document.getElementById('c-' + k);
+                        if (el) el.value = c[k] || '';
+                    });
+                }
+            }
+        }
+
+        // --- LOGIC ---
+        function getNextNr() {
+            const yr = new Date().getFullYear().toString().slice(-2);
+            let max = 0;
+            db.forEach(d => {
+                if (d.nr_v && d.nr_v.includes('/' + yr)) {
+                    const match = d.nr_v.match(/(\d+)\//);
+                    if (match) { const n = parseInt(match[1]); if (n > max) max = n; }
+                }
+            });
+            return `Nr. ${String(max + 1).padStart(3, '0')}/${yr}`;
+        }
+
+        function createNew() {
+            currentId = Date.now();
+            clearForm();
+            const tani = new Date();
+            document.getElementById('f-data').value = tani.toISOString().split('T')[0];
+            document.getElementById('f-ora').value = tani.toTimeString().slice(0, 5);
+            document.getElementById('f-nr-v').value = getNextNr();
+            document.getElementById('f-shenime').value = DEFAULT_NOTE;
+            document.getElementById('f-stamp-toggle').checked = true;
+            document.querySelectorAll('#app > div').forEach(d => d.classList.add('hidden'));
+            document.getElementById('edit-view').classList.remove('hidden');
+            setTimeout(initPads, 200);
+        }
+
+        function clearForm() {
+            document.querySelectorAll('#edit-view input[type="text"], #edit-view input[type="date"], #edit-view input[type="time"], #edit-view input[type="email"], #edit-view textarea').forEach(i => i.value = '');
+            document.querySelectorAll('#edit-view input[type="number"]').forEach(i => i.value = '');
+            document.querySelectorAll('#edit-view input[type="checkbox"]').forEach(c => c.checked = false);
+            if (padTekniku) padTekniku.clear(); if (padKlienti) padKlienti.clear();
+            document.getElementById('custom-prep-container').innerHTML = '';
+            FIXED_PREPS.forEach(p => togglePrepRow(p.replace(/\s/g, '_'), false));
+        }
+
+        function saveData() {
+            const preps = Array.from(document.querySelectorAll('.prep-check:checked')).map(c => {
+                const sid = c.dataset.name.replace(/\s/g, '_');
+                const row = document.getElementById(`qty-row-${sid}`);
+                return { emri: c.dataset.name, sasia: row.querySelector('.prep-qty').value, njesia: row.querySelector('.prep-unit').value };
+            });
+            document.querySelectorAll('.custom-prep-name').forEach(input => {
+                const row = input.parentElement;
+                if (input.value.trim()) preps.push({ emri: input.value.toUpperCase(), sasia: row.querySelector('.custom-prep-qty').value, njesia: row.querySelector('.custom-prep-unit').value });
+            });
+
+            const doc = {
+                id: currentId,
+                data: document.getElementById('f-data').value,
+                ora: document.getElementById('f-ora').value,
+                nr_v: document.getElementById('f-nr-v').value,
+                klienti: document.getElementById('f-klienti').value.toUpperCase().trim(),
+                adresa: document.getElementById('f-adresa').value.toUpperCase().trim(),
+                nui: document.getElementById('f-nui').value.toUpperCase().trim(),
+                m2: document.getElementById('f-m2').value,
+                tel: document.getElementById('f-tel').value,
+                email: document.getElementById('f-email').value.toLowerCase().trim(),
+                tekniku_emri: document.getElementById('f-tekniku-emri').value.toUpperCase(),
+                pranuesi_emri: document.getElementById('f-pranuesi-emri').value.toUpperCase(),
+                shenime: document.getElementById('f-shenime').value,
+                cmimi: document.getElementById('f-cmimi').value,
+                sherbimet: Array.from(document.querySelectorAll('.sh-check:checked')).map(c => c.value),
+                pestat: Array.from(document.querySelectorAll('.pest-check:checked')).map(c => c.value),
+                metodat: Array.from(document.querySelectorAll('.metoda-check:checked')).map(c => c.value),
+                preparatet: preps,
+                show_stamp: document.getElementById('f-stamp-toggle').checked,
+                sig_tekniku: padTekniku && !padTekniku.isEmpty() ? padTekniku.toDataURL() : null,
+                sig_klienti: padKlienti && !padKlienti.isEmpty() ? padKlienti.toDataURL() : null,
+                ts: Date.now()
+            };
+
+            const idx = db.findIndex(x => x.id === currentId);
+            if (idx > -1) db[idx] = doc; else db.push(doc);
+
+            if (doc.klienti) {
+                const existing = clientsDb.find(c => c.klienti === doc.klienti && c.adresa === doc.adresa);
+                if (!existing) {
+                    clientsDb.push({ klienti: doc.klienti, adresa: doc.adresa, nui: doc.nui, m2: doc.m2, tel: doc.tel, email: doc.email });
+                }
+            }
+
+            persist();
+            previewDoc(doc);
+        }
+
+        function deleteDoc(id) {
+            if (confirm("Fshij këtë vërtetim?")) { db = db.filter(x => x.id !== id); persist(); renderList(); }
+        }
+
+        // --- SORTING ---
+        function parseNrV(nrStr) {
+            if (!nrStr) return { seq: 0, year: 0 };
+            const m = nrStr.match(/(\d+)\/(\d+)/);
+            if (m) return { seq: parseInt(m[1]), year: parseInt(m[2]) };
+            return { seq: 0, year: 0 };
+        }
+
+        function renderList(onlyExpired = false) {
+            const query = document.getElementById('search-input').value.toLowerCase();
+            let filtered = db.filter(d => d.klienti.toLowerCase().includes(query) || d.nr_v.includes(query));
+            if (onlyExpired) {
+                const now = new Date();
+                filtered = filtered.filter(d => {
+                    const dDate = new Date(d.data);
+                    return ((now - dDate) / (1000 * 60 * 60 * 24 * 30)) >= 6;
+                });
+            }
+
+            filtered.sort((a, b) => {
+                const pA = parseNrV(a.nr_v);
+                const pB = parseNrV(b.nr_v);
+                if (pB.year !== pA.year) return pB.year - pA.year;
+                return pB.seq - pA.seq;
+            });
+
+            document.getElementById('docs-list').innerHTML = filtered.map(d => `
+                <tr class="border-b hover:bg-gray-50 uppercase text-[11px] font-bold">
+                    <td class="p-4"><span class="bg-black text-white px-2 py-1 rounded">${d.nr_v}</span></td>
+                    <td class="p-4">${d.klienti}</td><td class="p-4">${d.data}</td><td class="p-4">${d.cmimi || '-'} €</td>
+                    <td class="p-4 text-center">
+                        <div class="flex justify-center gap-3">
+                            <button onclick="previewDoc(${d.id})" class="text-blue-600 hover:scale-110 transition-transform"><i class="fas fa-file-pdf"></i></button>
+                            <button onclick="editDoc(${d.id})" class="text-amber-600 hover:scale-110 transition-transform"><i class="fas fa-edit"></i></button>
+                            <button onclick="deleteDoc(${d.id})" class="text-red-600 hover:scale-110 transition-transform"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </td>
+                </tr>`).join('');
+        }
+
+        function editDoc(id) {
+            const d = db.find(x => x.id === id); if (!d) return;
+            currentId = id; clearForm();
+            ['data', 'ora', 'nr_v', 'klienti', 'adresa', 'nui', 'm2', 'tel', 'email', 'tekniku_emri', 'pranuesi_emri', 'shenime', 'cmimi'].forEach(k => {
+                const el = document.getElementById('f-' + k); if (el) el.value = d[k] || '';
+            });
+            document.getElementById('f-stamp-toggle').checked = (d.show_stamp !== false);
+            d.sherbimet?.forEach(v => { const c = Array.from(document.querySelectorAll('.sh-check')).find(x => x.value === v); if (c) c.checked = true; });
+            d.pestat?.forEach(v => { const c = Array.from(document.querySelectorAll('.pest-check')).find(x => x.value === v); if (c) c.checked = true; });
+            d.metodat?.forEach(v => { const c = Array.from(document.querySelectorAll('.metoda-check')).find(x => x.value === v); if (c) c.checked = true; });
+            d.preparatet?.forEach(p => {
+                const c = document.querySelector(`.prep-check[data-name="${p.emri}"]`);
+                if (c) {
+                    c.checked = true; const sid = p.emri.replace(/\s/g, '_');
+                    const row = document.getElementById(`qty-row-${sid}`);
+                    if (row) { row.style.display = 'flex'; row.querySelector('.prep-qty').value = p.sasia; row.querySelector('.prep-unit').value = p.njesia; }
+                } else { addNewPrepField(p.emri, p.sasia, p.njesia); }
+            });
+            document.querySelectorAll('#app > div').forEach(div => div.classList.add('hidden'));
+            document.getElementById('edit-view').classList.remove('hidden');
+            setTimeout(() => {
+                initPads();
+                if (d.sig_tekniku) padTekniku.fromDataURL(d.sig_tekniku);
+                if (d.sig_klienti) padKlienti.fromDataURL(d.sig_klienti);
+            }, 200);
+        }
+
+        function renderClientsTable() {
+            document.getElementById('clients-table-container').innerHTML = clientsDb.map(c => `
+                <div class="bg-gray-50 p-4 rounded-xl border-2 border-transparent hover:border-black flex justify-between items-center uppercase text-xs font-black transition-all">
+                    <div><div>${c.klienti}</div><div class="text-[10px] text-gray-500">NUI: ${c.nui} | ${c.adresa}</div></div>
+                    <div class="flex gap-2">
+                        <button onclick="showClientForm('${c.nui}')" class="bg-black text-white px-4 py-2 rounded-lg">EDITO</button>
+                        <button onclick="deleteClient('${c.nui}')" class="bg-red-600 text-white px-4 py-2 rounded-lg">FSHIJ</button>
+                    </div>
+                </div>`).join('');
+        }
+
+        function handleSaveClient() {
+            const c = {
+                klienti: document.getElementById('c-klienti').value.trim().toUpperCase(),
+                nui: document.getElementById('c-nui').value.trim().toUpperCase(),
+                adresa: document.getElementById('c-adresa').value.trim().toUpperCase(),
+                m2: document.getElementById('c-m2').value.trim(),
+                tel: document.getElementById('c-tel').value.trim(),
+                email: document.getElementById('c-email').value.trim().toLowerCase()
+            };
+            if (!c.klienti || !c.nui) return alert("Emri dhe NUI janë obligative!");
+
+            const existing = clientsDb.find(x => x.klienti === c.klienti && x.adresa === c.adresa);
+            if (existing) {
+                Object.assign(existing, c);
+            } else {
+                clientsDb.push(c);
+            }
+
+            persist(); alert("Klienti u ruajt!"); showClientManagement();
+        }
+
+        function deleteClient(nui) {
+            if (confirm("Fshij klientin?")) { clientsDb = clientsDb.filter(x => x.nui !== nui); persist(); renderClientsTable(); }
+        }
+
+        function updateDashboardCount() {
+            const now = new Date();
+            const count = db.filter(d => (now - new Date(d.data)) / (1000 * 60 * 60 * 24 * 30) >= 6).length;
+            document.getElementById('dash-expired-count').innerText = count;
+        }
+
+        // --- FORMS UTILS ---
+        function buildForms() {
+            document.getElementById('sh-inputs').innerHTML = SH_TYPES.map(s => `<label class="flex items-center gap-2 p-2 border-2 border-gray-100 rounded-lg cursor-pointer bg-white hover:border-black transition-colors"><input type="checkbox" class="sh-check w-4 h-4 accent-black" value="${s}"><span class="text-[9px] font-bold uppercase select-none">${s}</span></label>`).join('');
+            document.getElementById('pest-inputs').innerHTML = PEST_TYPES.map(p => `<label class="flex items-center gap-2 p-2 border-2 border-gray-100 rounded-lg cursor-pointer bg-white hover:border-black transition-colors"><input type="checkbox" class="pest-check w-4 h-4 accent-black" value="${p}"><span class="text-[9px] font-bold uppercase select-none">${p}</span></label>`).join('');
+            document.getElementById('metoda-inputs').innerHTML = METODA_TYPES.map(m => `<label class="flex items-center gap-2 p-3 border-2 border-gray-100 rounded-xl cursor-pointer bg-white hover:border-black transition-colors"><input type="checkbox" class="metoda-check w-5 h-5 accent-black" value="${m}"><span class="text-[11px] font-black uppercase select-none">${m}</span></label>`).join('');
+            document.getElementById('prep-inputs').innerHTML = FIXED_PREPS.map(p => {
+                const sid = p.replace(/\s/g, '_');
+                return `<div class="p-3 border-2 border-gray-100 rounded-xl bg-white"><label class="flex items-center gap-2 mb-2 cursor-pointer"><input type="checkbox" class="prep-check w-4 h-4 accent-black" data-name="${p}" onchange="togglePrepRow('${sid}', this.checked)"><span class="text-[9px] font-black uppercase select-none">${p}</span></label>
+                <div id="qty-row-${sid}" class="hidden gap-2"><input type="text" placeholder="Sasia" class="prep-qty p-1.5 text-xs border-2 border-gray-300 rounded w-16 font-bold"><select class="prep-unit p-1.5 text-[9px] border-2 border-gray-300 rounded font-bold flex-1">${UNIT_TYPES.map(u => `<option value="${u}">${u}</option>`).join('')}</select></div></div>`;
+            }).join('');
+        }
+        function togglePrepRow(sid, show) { const r = document.getElementById(`qty-row-${sid}`); if (r) r.style.display = show ? 'flex' : 'none'; }
+        function addNewPrepField(n = "", q = "", u = "LITËR") {
+            const div = document.createElement('div'); div.className = "p-3 border-2 border-gray-100 rounded-xl bg-gray-50";
+            div.innerHTML = `<input type="text" class="custom-prep-name w-full p-2 text-[10px] border-2 border-gray-300 rounded mb-2 font-black uppercase" placeholder="EMRI" value="${n}"><div class="flex gap-2"><input type="text" class="custom-prep-qty p-2 text-xs border-2 border-gray-300 rounded w-16 font-bold" value="${q}"><select class="custom-prep-unit p-2 text-[9px] border-2 border-gray-300 rounded flex-1">${UNIT_TYPES.map(x => `<option value="${x}" ${u === x ? 'selected' : ''}>${x}</option>`).join('')}</select><button onclick="this.parentElement.parentElement.remove()" class="text-red-500 px-2"><i class="fas fa-times"></i></button></div>`;
+            document.getElementById('custom-prep-container').appendChild(div);
+        }
+        function handleFuzzySearch(v) {
+            const r = document.getElementById('fuzzy-results'); if (!v) { r.classList.add('hidden'); return; }
+            const q = v.toLowerCase();
+            const m = clientsDb.filter(c => c.klienti.toLowerCase().includes(q) || c.nui.toLowerCase().includes(q));
+            if (m.length) {
+                const unique = [...new Map(m.map(item => [item['klienti'] + item['adresa'], item])).values()];
+                r.innerHTML = unique.map(c => `<div onclick="selectFuzzy('${c.klienti}', '${c.adresa}')" class="p-3 border-b hover:bg-gray-100 cursor-pointer"><div>${c.klienti}</div><div class="text-[9px] text-gray-400">NUI: ${c.nui} | ${c.adresa}</div></div>`).join('');
+                r.classList.remove('hidden');
+            } else r.classList.add('hidden');
+        }
+        function selectFuzzy(k, a) {
+            const c = clientsDb.find(x => x.klienti === k && x.adresa === a);
+            if (c) { ['klienti', 'adresa', 'nui', 'm2', 'tel', 'email'].forEach(key => { const el = document.getElementById('f-' + key); if (el) el.value = c[key] || ''; }); }
+            document.getElementById('fuzzy-results').classList.add('hidden');
+        }
+        function initPads() {
+            const ct = document.getElementById('sig-tekniku'), ck = document.getElementById('sig-klienti');
+            if (!ct || !ck) return;
+            const res = (c, p) => { const r = Math.max(window.devicePixelRatio || 1, 1); c.width = c.offsetWidth * r; c.height = c.offsetHeight * r; c.getContext("2d").scale(r, r); };
+            if (!padTekniku) padTekniku = new SignaturePad(ct, { penColor: '#0000CD' });
+            if (!padKlienti) padKlienti = new SignaturePad(ck, { penColor: '#0000CD' });
+            res(ct, padTekniku); res(ck, padKlienti);
+        }
+        function clearSig(t) { if (t === 'tekniku') padTekniku.clear(); else padKlienti.clear(); }
+
+        // --- PDF ENGINE ---
+        function ensureImagesLoaded(element) {
+            const imgs = Array.from(element.querySelectorAll('img'));
+            const promises = imgs.map(img => {
+                if (img.complete) return Promise.resolve();
+                return new Promise(resolve => {
+                    img.onload = resolve;
+                    img.onerror = resolve; // Continue even if error
+                });
+            });
+            return Promise.all(promises);
+        }
+
+        function previewDoc(idOrData) {
+            const d = typeof idOrData === 'object' ? idOrData : db.find(x => x.id === idOrData); if (!d) return;
+            const logo = `<div style="text-align:center;margin-bottom:10px;"><img src="${LOGO_URL}" crossorigin="anonymous" style="width:250px;display:inline-block;"></div>`;
+            const stampImg = d.show_stamp !== false ? `<img src="${STAMP_URL}" crossorigin="anonymous" style="width:130px;position:absolute;bottom:130px;left:50%;transform:translateX(-50%);opacity:0.8;z-index:10;pointer-events:none;">` : '';
+
+            const pdfTemplate = `
+            <div id="pdf-final" style="width:800px;min-height:1080px;padding:30px;background:white;color:black;font-family:Inter;display:flex;flex-direction:column;justify-content:space-between;border:1px solid #eee;position:relative;">
+                ${stampImg}
+                <div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;align-items:center;margin-bottom:10px;">
+                        <div></div><div>${logo}</div><div style="text-align:right;"><div style="font-weight:900;font-size:16px;">VËRTETIMI</div><div style="font-weight:700;">${d.nr_v}</div></div>
+                    </div>
+                    <h1 style="text-align:center;font-weight:900;text-transform:uppercase;font-size:22px;margin:10px 0;">Vërtetim për kryerjen e shërbimeve DDD</h1>
+                    <div style="display:flex;gap:40px;justify-content:center;background:#f9f9f9;padding:10px;border-radius:10px;font-weight:900;margin-bottom:15px;border:2px solid #000;">
+                        <div>DATA: ${d.data.split('-').reverse().join('.')}</div><div>ORA: ${d.ora}</div>
+                    </div>
+                    <div style="border:2px solid black;padding:15px;border-radius:15px;margin-bottom:15px;line-height:1.8;">
+                        <div style="display:flex;border-bottom:1px solid #eee;"><span style="width:100px;font-weight:900;color:#666;font-size:11px;">KLIENTI:</span><span style="font-weight:900;text-transform:uppercase;">${d.klienti}</span></div>
+                        <div style="display:flex;border-bottom:1px solid #eee;"><span style="width:100px;font-weight:900;color:#666;font-size:11px;">ADRESA:</span><span style="font-weight:700;text-transform:uppercase;">${d.adresa}</span></div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;margin-top:5px;">
+                            <div style="display:flex;"><span style="font-weight:900;color:#666;font-size:10px;margin-right:10px;">NUI:</span><span style="font-weight:700;">${d.nui}</span></div>
+                            <div style="display:flex;"><span style="font-weight:900;color:#666;font-size:10px;margin-right:10px;">M2:</span><span style="font-weight:700;">${d.m2}</span></div>
+                            <div style="display:flex;"><span style="font-weight:900;color:#666;font-size:10px;margin-right:10px;">TEL:</span><span style="font-weight:700;">${d.tel}</span></div>
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 2fr;gap:15px;margin-bottom:15px;">
+                        <div style="border:2px solid black;padding:10px;border-radius:15px;">
+                            <div style="font-weight:900;font-size:11px;border-bottom:1px solid #000;margin-bottom:5px;">SHËRBIMI</div>
+                            <div style="font-size:12px;">${SH_TYPES.map(s => `<div style="display:flex;align-items:center;margin-bottom:2px;"><div style="width:12px;height:12px;border:1px solid black;margin-right:5px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;">${d.sherbimet.includes(s) ? '✓' : ''}</div><b>${s}</b></div>`).join('')}</div>
+                        </div>
+                        <div style="border:2px solid black;padding:10px;border-radius:15px;">
+                            <div style="font-weight:900;font-size:11px;border-bottom:1px solid #000;margin-bottom:5px;">PESTAT</div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;font-size:11px;">${PEST_TYPES.map(p => `<div style="display:flex;align-items:center;margin-bottom:2px;"><div style="width:10px;height:10px;border:1px solid black;margin-right:5px;display:flex;align-items:center;justify-content:center;font-size:8px;">${d.pestat.includes(p) ? '✓' : ''}</div><b>${p}</b></div>`).join('')}</div>
+                        </div>
+                    </div>
+                    <div style="border:2px solid black;border-radius:15px;overflow:hidden;margin-bottom:15px;">
+                        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                            <tr style="background:black;color:white;font-weight:900;font-size:11px;"><th style="padding:8px;text-align:left;">PREPARATI</th><th style="padding:8px;">NJËSIA</th><th style="padding:8px;">SASIA</th></tr>
+                            ${d.preparatet.map(p => `<tr style="border-top:1px solid #eee;"><td style="padding:8px;font-weight:900;">${p.emri}</td><td style="padding:8px;text-align:center;">${p.njesia}</td><td style="padding:8px;text-align:center;font-weight:900;">${p.sasia}</td></tr>`).join('')}
+                        </table>
+                    </div>
+                    <div style="border:2px solid black;padding:10px;border-radius:15px;font-weight:900;margin-bottom:15px;display:flex;gap:20px;font-size:12px;">
+                        <span style="font-style:italic;">METODA:</span>
+                        ${METODA_TYPES.map(m => `<div style="display:flex;align-items:center;"><div style="width:15px;height:15px;border:1px solid black;margin-right:5px;display:flex;align-items:center;justify-content:center;">${d.metodat.includes(m) ? '✕' : ''}</div>${m}</div>`).join('')}
+                    </div>
+                    ${d.shenime ? `<div style="margin-bottom:15px;"><div style="font-weight:900;font-size:10px;color:#999;">SHËNIME:</div><div style="border:1px solid #ddd;padding:10px;border-radius:10px;font-size:13px;min-height:50px;">${d.shenime}</div></div>` : ''}
+                </div>
+                <div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:50px;padding:0 30px;text-align:center;font-weight:900;font-size:12px;">
+                        <div><div style="height:60px;display:flex;align-items:center;justify-content:center;">${d.sig_tekniku ? `<img src="${d.sig_tekniku}" style="max-height:60px;">` : ''}</div><div style="border-top:1px solid black;padding-top:5px;">TEKNIKU: ${d.tekniku_emri}</div></div>
+                        <div><div style="height:60px;display:flex;align-items:center;justify-content:center;">${d.sig_klienti ? `<img src="${d.sig_klienti}" style="max-height:60px;">` : ''}</div><div style="border-top:1px solid black;padding-top:5px;">PRANUESI: ${d.pranuesi_emri || ''}</div></div>
+                    </div>
+                    <div style="border-top:2px solid black;margin-top:30px;padding-top:10px;text-align:center;font-weight:900;font-size:10px;">
+                        <div>NUI 811498957 | RR. MEHMET AKIF ERSOY NR. 17, TASLIXHE II - PRISHTINË | e-mail info@doctorexterminator.com | 044 158 638, 048 158 638</div>
+                        <div style="color:#999;font-style:italic;margin-top:5px;">* Dokument zyrtar | Vlefshmëria: 6 muaj</div>
+                    </div>
+                </div>
+            </div>`;
+            document.getElementById('pdf-render-zone').innerHTML = pdfTemplate;
+            document.getElementById('print-content').innerHTML = pdfTemplate;
+            document.querySelectorAll('#app > div').forEach(div => div.classList.add('hidden'));
+            document.getElementById('print-view').classList.remove('hidden');
+
+            document.getElementById('btn-download-pdf').onclick = async () => {
+                const element = document.getElementById('pdf-final');
+                await ensureImagesLoaded(element);
+                const opt = {
+                    margin: 0,
+                    filename: `Vertetim_${d.nr_v.replace(/\//g, '-')}_${d.klienti.replace(/\s+/g, '_')}.pdf`,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true, allowTaint: true, logging: true },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                };
+                html2pdf().from(element).set(opt).save();
+            };
+        }
+
+        window.onload = () => { buildForms(); showDashboard(); };
+    </script>
+</body>
+
+</html>

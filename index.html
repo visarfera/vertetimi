@@ -216,6 +216,12 @@
                 </div>
             </div>
 
+            <div class="flex gap-2 mb-4">
+                <button onclick="setListMode('privat')" id="tab-privat"
+                    class="flex-1 py-2 rounded-lg font-black uppercase bg-green-600 text-white shadow-lg">Privat</button>
+                <button onclick="setListMode('publik')" id="tab-publik"
+                    class="flex-1 py-2 rounded-lg font-black uppercase bg-white text-gray-500 border border-gray-200">Publik</button>
+            </div>
             <input type="text" id="search-input" oninput="renderList()"
                 class="w-full p-5 bg-white border-2 rounded-2xl font-bold text-xl shadow-lg mb-8 outline-none focus:border-green-500"
                 placeholder="Kërko klientin...">
@@ -264,7 +270,8 @@
                             <label
                                 class="block text-[10px] font-black text-green-600 uppercase mb-2 tracking-widest">Data</label>
                             <input type="date" id="f-data"
-                                class="w-full p-3 bg-white border-2 border-green-200 rounded-xl font-bold outline-none">
+                                class="w-full p-3 bg-white border-2 border-green-200 rounded-xl font-bold outline-none"
+                                onchange="updatePublicNumberIfNeeded()">
                         </div>
                         <div>
                             <label
@@ -288,6 +295,18 @@
                         <label
                             class="block text-[10px] font-black text-gray-400 uppercase tracking-widest border-b pb-2">Informacionet
                             e Klientit</label>
+                        <div class="flex gap-6 mb-4">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="client_type" value="privat" checked
+                                    onchange="toggleClientType()" class="w-5 h-5 accent-green-600">
+                                <span class="font-bold text-sm uppercase">Privat</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="client_type" value="publik" onchange="toggleClientType()"
+                                    class="w-5 h-5 accent-green-600">
+                                <span class="font-bold text-sm uppercase">Publik</span>
+                            </label>
+                        </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div class="md:col-span-2 relative">
                                 <label class="block text-[10px] font-bold text-gray-500 mb-1">Emri i Klientit /
@@ -295,6 +314,17 @@
                                 <input type="text" id="f-klienti" autocomplete="off"
                                     class="w-full p-4 bg-green-50 border-2 border-green-100 rounded-xl font-black uppercase outline-none focus:border-green-600 transition-all text-black"
                                     placeholder="Kërko klientin..." oninput="handleFuzzySearch(this.value)">
+                                <select id="f-klienti-select"
+                                    class="hidden w-full p-4 bg-green-50 border-2 border-green-100 rounded-xl font-black uppercase outline-none focus:border-green-600 transition-all text-black"
+                                    onchange="document.getElementById('f-klienti').value = this.value">
+                                    <option value="" disabled selected>ZGJIDH INSTITUCIONIN...</option>
+                                    <option value="KRU PRISHTINA SH.A.">KRU PRISHTINA SH.A.</option>
+                                    <option value="MINISTRIA E SHENDETESISE">MINISTRIA E SHENDETESISE</option>
+                                    <option value="KORPORATA ENERGJETIKE E KOSOVES">KORPORATA ENERGJETIKE E KOSOVES
+                                    </option>
+                                    <option value="POSTA E KOSOVES">POSTA E KOSOVES</option>
+                                    <option value="KOMUNA E FERIZAJT">KOMUNA E FERIZAJT</option>
+                                </select>
                                 <div id="fuzzy-results"
                                     class="hidden absolute left-0 right-0 top-full mt-2 bg-white border-2 border-green-500 rounded-2xl shadow-2xl z-50 max-h-80 overflow-y-auto">
                                 </div>
@@ -446,6 +476,16 @@
                     </div>
                 </div>
                 <div class="max-w-xl mx-auto p-6 space-y-6">
+                    <div class="flex gap-6 mb-4 p-3 bg-gray-50 border border-gray-200 rounded-xl">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="c_tipi" value="privat" checked class="w-5 h-5 accent-green-600">
+                            <span class="font-bold text-xs uppercase">Privat</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="c_tipi" value="publik" class="w-5 h-5 accent-green-600">
+                            <span class="font-bold text-xs uppercase">Publik (Institucion)</span>
+                        </label>
+                    </div>
                     <input type="text" id="c-klienti"
                         class="w-full p-3 bg-gray-50 border rounded-xl font-bold uppercase"
                         placeholder="EMRI I KLIENTIT">
@@ -517,6 +557,7 @@
         let editingClientNui = null;
         let showOnlyExpired = false;
         let padTekniku, padKlienti;
+        let currentListMode = 'privat';
 
         // Auth State
         let currentUser = null;
@@ -783,6 +824,65 @@
             document.getElementById('fuzzy-results').classList.add('hidden');
         }
 
+        function toggleClientType() {
+            const isPublik = document.querySelector('input[name="client_type"][value="publik"]').checked;
+            const input = document.getElementById('f-klienti');
+            const select = document.getElementById('f-klienti-select');
+            const fuzzy = document.getElementById('fuzzy-results');
+            if (isPublik) {
+                input.classList.add('hidden');
+                select.classList.remove('hidden');
+                fuzzy.classList.add('hidden');
+                // Dynamic Populate from DB
+                const publicClients = clientsDb.filter(c => c.tipi === 'publik');
+                select.innerHTML = '<option value="" disabled selected>ZGJIDH INSTITUCIONIN...</option>' +
+                    publicClients.map(c => `<option value="${c.klienti}" data-nui="${c.nui || ''}" data-adresa="${c.adresa || ''}">${c.klienti}</option>`).join('');
+                // Auto-fill fields on select change
+                select.onchange = function () {
+                    const opt = this.options[this.selectedIndex];
+                    input.value = this.value;
+                    document.getElementById('f-nui').value = opt.dataset.nui || '';
+                    document.getElementById('f-adresa').value = opt.dataset.adresa || '';
+                    updatePublicNumberIfNeeded();
+                };
+            } else {
+                input.classList.remove('hidden');
+                select.classList.add('hidden');
+                document.getElementById('f-nr-v').value = getNextCertNumber();
+            }
+        }
+
+        function updatePublicNumberIfNeeded() {
+            const isPublik = document.querySelector('input[name="client_type"][value="publik"]').checked;
+            if (isPublik) {
+                const clientName = document.getElementById('f-klienti').value;
+                const dateStr = document.getElementById('f-data').value;
+                if (clientName && dateStr) {
+                    document.getElementById('f-nr-v').value = calculatePublicNumber(clientName, dateStr);
+                }
+            }
+        }
+
+        function calculatePublicNumber(clientName, dateStr) {
+            const date = new Date(dateStr);
+            const year = date.getFullYear();
+            const yearShort = year.toString().slice(-2);
+            const month = date.getMonth() + 1;
+            let quarter = 1;
+            if (month >= 4 && month <= 6) quarter = 2;
+            else if (month >= 7 && month <= 9) quarter = 3;
+            else if (month >= 10 && month <= 12) quarter = 4;
+
+            const count = db.filter(d =>
+                d.tipi === 'publik' &&
+                d.klienti === clientName &&
+                d.data && new Date(d.data).getFullYear() === year &&
+                Math.floor(new Date(d.data).getMonth() / 3) + 1 === quarter
+            ).length;
+
+            return `Nr. ${String(count + 1).padStart(2, '0')} /TM${quarter} - ${yearShort}`;
+        }
+
         function fillClientData(nui) {
             const c = clientsDb.find(x => x.nui === nui);
             if (c) {
@@ -810,6 +910,7 @@
 
             const doc = {
                 id: currentId,
+                tipi: document.querySelector('input[name="client_type"]:checked').value,
                 data: document.getElementById('f-data').value,
                 ora: document.getElementById('f-ora').value,
                 nr_v: document.getElementById('f-nr-v').value,
@@ -856,20 +957,22 @@
                 alert("Gabim gjatë ruajtjes: " + e.message);
             });
 
-            // Auto-save client if new (Name + Address uniqueness)
+            // Only auto-save if in PRIVATE mode
+            const isPrivateMode = document.querySelector('input[name="client_type"][value="privat"]').checked;
             const clientKey = `${doc.klienti}_${doc.adresa}`.toUpperCase().trim();
             const existingClient = clientsDb.find(c =>
                 `${c.klienti}_${c.adresa}`.toUpperCase().trim() === clientKey
             );
 
-            if (!existingClient && doc.klienti && doc.adresa) {
+            if (isPrivateMode && !existingClient && doc.klienti && doc.adresa) {
                 saveNewClientDirectly({
                     klienti: doc.klienti,
                     adresa: doc.adresa,
                     nui: doc.nui,
                     m2: doc.m2,
                     tel: doc.tel,
-                    email: doc.email
+                    email: doc.email,
+                    tipi: 'privat'
                 });
             }
         }
@@ -882,6 +985,8 @@
         function createNew() {
             currentId = Date.now();
             clearForm();
+            document.querySelector('input[name="client_type"][value="privat"]').click();
+            toggleClientType(); // Ensure UI and numbering reset correctly
             const tani = new Date();
             document.getElementById('f-data').value = tani.toISOString().split('T')[0];
             document.getElementById('f-ora').value = tani.toTimeString().slice(0, 5);
@@ -1030,10 +1135,28 @@
             if (showOnlyExpired) showList(); else showPanicList();
         }
 
+        function setListMode(mode) {
+            currentListMode = mode;
+            const tabPrivat = document.getElementById('tab-privat');
+            const tabPublik = document.getElementById('tab-publik');
+            if (mode === 'privat') {
+                tabPrivat.className = "flex-1 py-2 rounded-lg font-black uppercase bg-green-600 text-white shadow-lg";
+                tabPublik.className = "flex-1 py-2 rounded-lg font-black uppercase bg-white text-gray-500 border border-gray-200";
+            } else {
+                tabPublik.className = "flex-1 py-2 rounded-lg font-black uppercase bg-green-600 text-white shadow-lg";
+                tabPrivat.className = "flex-1 py-2 rounded-lg font-black uppercase bg-white text-gray-500 border border-gray-200";
+            }
+            renderList();
+        }
+
         function renderList() {
             const query = document.getElementById('search-input')?.value.toLowerCase() || '';
             let filtered = db.filter(d => (d.klienti || '').toLowerCase().includes(query) || (d.nr_v || '').toLowerCase().includes(query));
             if (showOnlyExpired) filtered = filtered.filter(d => monthsDiff(d.data) >= 6);
+
+            // Filter by Mode
+            filtered = filtered.filter(d => (d.tipi || 'privat') === currentListMode);
+
             document.getElementById('btn-panic').textContent = showOnlyExpired ? 'Filtro: Skaduar' : 'Filtro: Të Gjitha';
 
             document.getElementById('docs-list').innerHTML = filtered.map(d => {
@@ -1117,6 +1240,7 @@
             ['dashboard-view', 'list-view', 'edit-view', 'print-view', 'client-view', 'clients-mgmt-view'].forEach(id => document.getElementById(id).classList.add('hidden'));
             document.getElementById('client-view').classList.remove('hidden');
             ['c-klienti', 'c-nui', 'c-adresa', 'c-m2', 'c-tel', 'c-email'].forEach(id => document.getElementById(id).value = '');
+            document.querySelector('input[name="c_tipi"][value="privat"]').checked = true;
             editingClientNui = docId;
             if (docId) {
                 const c = clientsDb.find(x => x._docId === docId);
@@ -1127,6 +1251,10 @@
                     document.getElementById('c-m2').value = c.m2 || '';
                     document.getElementById('c-tel').value = c.tel || '';
                     document.getElementById('c-email').value = c.email || '';
+                    if (c.tipi) {
+                        const rb = document.querySelector(`input[name="c_tipi"][value="${c.tipi}"]`);
+                        if (rb) rb.checked = true;
+                    }
                 }
             }
         }
@@ -1141,7 +1269,8 @@
                 adresa: document.getElementById('c-adresa').value.trim().toUpperCase(),
                 m2: document.getElementById('c-m2').value.trim(),
                 tel: document.getElementById('c-tel').value.trim(),
-                email: document.getElementById('c-email').value.trim().toLowerCase()
+                email: document.getElementById('c-email').value.trim().toLowerCase(),
+                tipi: document.querySelector('input[name="c_tipi"]:checked').value
             };
 
             if (!c.klienti || !c.adresa) return alert("Plotësoni emrin dhe adresën!");

@@ -979,10 +979,8 @@
                 btn.classList.remove('bg-green-800');
                 btn.disabled = false;
 
-                // Share & Redirect
-                sharePdf(doc).then(() => {
-                    showList();
-                });
+                // Just Redirect
+                showList();
             }).catch(e => {
                 btn.innerHTML = originalHtml;
                 btn.classList.remove('bg-green-800');
@@ -1231,17 +1229,17 @@
         }
 
         function riIntervenim(id) {
-            if (!confirm('Dëshironi të bëni ri-intervenimin? Dokumenti do të largohet nga lista e skaduar.')) return;
+            if (!confirm('Dëshironi të bëni ri-intervenimin? Dokumenti do të hapet dhe do të vendoset data e sotme.')) return;
+            
+            // Hapim dokumentin për editim (silent=false)
+            // editDoc thërret clearForm dhe mbush fushat
+            // Për shkak se editDoc ka një setTimeout prej 200ms për nënshkrimet, 
+            // ne mund të ndryshojmë datën menjëherë pas thirrjes ose brenda saj.
+            editDoc(id, false);
+            
+            // Vendosim datën e sotme në fushën e formularit
             const today = new Date().toISOString().split('T')[0];
-            firestore.collection('vertetimet').doc(String(id)).update({ data: today }).then(() => {
-                // Update local db
-                const doc = db.find(d => String(d.id) === String(id));
-                if (doc) doc.data = today;
-                renderList();
-                updateDashboardCount();
-            }).catch(e => {
-                alert('Gabim: ' + e.message);
-            });
+            document.getElementById('f-data').value = today;
         }
 
         function updateDashboardCount() {

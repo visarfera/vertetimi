@@ -231,6 +231,7 @@
                         <tr class="bg-gray-800 text-white text-[10px] uppercase tracking-wider">
                             <th class="p-4 font-black">Nr. Vërtetimit</th>
                             <th class="p-4 font-black">Klienti</th>
+                            <th class="p-4 font-black">Adresa</th>
                             <th class="p-4 font-black">Data</th>
                             <th class="p-4 font-black">Çmimi</th>
                             <th class="p-4 font-black">Lëshuar nga</th>
@@ -258,7 +259,7 @@
                         </div>
                         <button onclick="saveData()"
                             class="bg-green-600 hover:bg-green-700 text-white px-8 md:px-12 py-3 rounded-xl font-black shadow-md transition-all flex items-center justify-center uppercase tracking-wide">
-                            <i class="fas fa-save mr-2"></i> RUAJ DHE DËRGO NË E-MAIL
+                            <i class="fas fa-save mr-2"></i> RUAJ
                         </button>
                     </div>
                 </div>
@@ -1212,6 +1213,7 @@
                 <tr class="${isExpired ? 'bg-red-50 border-b border-red-200 hover:bg-red-100' : 'border-b border-gray-100 hover:bg-green-50/40'} transition-colors group">
                     <td class="p-4"><span class="bg-green-100 text-green-800 px-2 py-1 rounded text-[10px] font-black">${d.nr_v}</span></td>
                     <td class="p-4 font-black text-gray-800 text-xs uppercase">${d.klienti}</td>
+                    <td class="p-4 font-bold text-gray-700 text-xs uppercase">${d.adresa || '-'}</td>
                     <td class="p-4 font-bold text-gray-600 text-xs">${d.data.split('-').reverse().join('/')}</td>
                     <td class="p-4 font-black text-gray-900 text-xs">${d.kontrate ? '<span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[10px] font-black">KONTRATË</span>' : (d.cmimi ? d.cmimi + ' €' : '-')}</td>
                     <td class="p-4 text-gray-400 text-[10px] font-medium truncate max-w-[150px] italic">${d.te_dhenat_e_userit || 'Sistemi'}</td>

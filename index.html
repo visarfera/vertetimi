@@ -435,7 +435,7 @@
                                     class="block text-[10px] font-black text-gray-400 uppercase mb-2 tracking-widest">NËNSHKRIMI
                                     I TEKNIKUT</label>
                                 <div
-                                    class="rounded-xl bg-gray-50 h-52 relative border-2 border-dashed border-green-400">
+                                    class="rounded-xl bg-gray-50 h-60 relative border-2 border-dashed border-green-400">
                                     <canvas id="sig-tekniku" class="w-full h-full"></canvas>
                                 </div>
                                 <button onclick="clearSig('tekniku')"
@@ -446,7 +446,7 @@
                                     class="block text-[10px] font-black text-gray-400 uppercase mb-2 tracking-widest">NËNSHKRIMI
                                     I KLIENTIT</label>
                                 <div
-                                    class="rounded-xl bg-gray-50 h-52 relative border-2 border-dashed border-green-400">
+                                    class="rounded-xl bg-gray-50 h-60 relative border-2 border-dashed border-green-400">
                                     <canvas id="sig-klienti" class="w-full h-full"></canvas>
                                 </div>
                                 <button onclick="clearSig('klienti')"
@@ -905,12 +905,12 @@
             };
 
             if (!padTekniku) {
-                padTekniku = new SignaturePad(canvasTekniku, { backgroundColor: 'rgba(255, 255, 255, 0)', penColor: '#0000FF', minWidth: 0.8, maxWidth: 1.8 });
+                padTekniku = new SignaturePad(canvasTekniku, { backgroundColor: 'rgba(255, 255, 255, 0)', penColor: '#0000FF', minWidth: 0.5, maxWidth: 1.5 });
                 padTekniku.onEnd = () => { canvasTekniku.dataset.latest = padTekniku.toDataURL(); };
                 window.addEventListener("resize", () => _resize(canvasTekniku, padTekniku));
             }
             if (!padKlienti) {
-                padKlienti = new SignaturePad(canvasKlienti, { backgroundColor: 'rgba(255, 255, 255, 0)', penColor: '#0000FF', minWidth: 0.8, maxWidth: 1.8 });
+                padKlienti = new SignaturePad(canvasKlienti, { backgroundColor: 'rgba(255, 255, 255, 0)', penColor: '#0000FF', minWidth: 0.5, maxWidth: 1.5 });
                 padKlienti.onEnd = () => { canvasKlienti.dataset.latest = padKlienti.toDataURL(); };
                 window.addEventListener("resize", () => _resize(canvasKlienti, padKlienti));
             }

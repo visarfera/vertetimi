@@ -518,11 +518,15 @@
 
             <!-- FAQJA E PRINTIMIT -->
             <div id="print-view" class="hidden fixed inset-0 bg-zinc-900 overflow-auto p-4 z-50">
-                <div class="max-w-[21cm] mx-auto flex justify-between mb-4 sticky top-0 z-10">
+                <div class="max-w-[21cm] mx-auto flex justify-between items-center mb-4 sticky top-0 z-10 bg-zinc-900/90 py-2 px-4 rounded-xl gap-4">
                     <button onclick="showList()"
-                        class="bg-white/10 text-white px-6 py-2 rounded-lg font-bold">Mbyll</button>
+                        class="bg-white/10 text-white px-6 py-2 rounded-lg font-bold hover:bg-white/20 transition-colors">Mbyll</button>
+                    <div class="flex bg-zinc-800 p-1 rounded-lg border border-zinc-700">
+                        <button id="btn-lang-sq" onclick="setPrintLanguage('sq')" class="px-4 py-1.5 rounded-md font-bold text-xs transition-all bg-green-600 text-white">SQ</button>
+                        <button id="btn-lang-en" onclick="setPrintLanguage('en')" class="px-4 py-1.5 rounded-md font-bold text-xs transition-all text-gray-400 hover:text-white">EN</button>
+                    </div>
                     <button id="btn-download-pdf"
-                        class="bg-green-600 text-white px-10 py-2 rounded-lg font-bold shadow-xl border-b-4 border-green-800 active:translate-y-1">Shkarko
+                        class="bg-green-600 text-white px-10 py-2 rounded-lg font-bold shadow-xl border-b-4 border-green-800 active:translate-y-1 hover:bg-green-700 transition-colors">Shkarko
                         PDF</button>
                 </div>
                 <div id="print-content" class="bg-white w-[21cm] min-h-[29.7cm] mx-auto shadow-2xl"></div>
@@ -535,6 +539,146 @@
         style="position: absolute; left: -9999px; top: -9999px; width: 800px; background: white; pointer-events: none;">
     </div>
     <script>
+        const TRANSLATIONS = {
+            sq: {
+                certificate: "VËRTETIMI",
+                title: "Vërtetim për kryerjen e shërbimeve DDD",
+                date: "DATA",
+                time: "KOHA",
+                client: "Klienti",
+                address: "Adresa",
+                nui: "NUI",
+                m2: "M2",
+                tel: "Tel",
+                email: "Email",
+                service: "Sherbimi",
+                pests: "Pestat e trajtuara",
+                prep_used: "Preparati i përdorur",
+                unit: "Njësia",
+                qty: "Sasia",
+                method: "METODA E APLIKIMIT",
+                notes: "SHËNIME / VËREJTJE",
+                technician: "TEKNIKU",
+                client_recipient: "KLIENTI / PRANUESI",
+                official_doc: "* Dokument zyrtar | Vlefshmëria: 6 muaj",
+                no_prep: "Asnjë preparat i aplikuar",
+                contract: "KONTRATË",
+                sh_types: {
+                    "KONTROLLË": "KONTROLLË",
+                    "INTERVENIM": "INTERVENIM",
+                    "DEZINFEKTIM": "DEZINFEKTIM",
+                    "DEZINSEKTIM": "DEZINSEKTIM",
+                    "DERATIZIM": "DERATIZIM"
+                },
+                pest_types: {
+                    "BAKTERE / VIRUS": "BAKTERE / VIRUS",
+                    "MUSHKONJA": "MUSHKONJA",
+                    "MIZA": "MIZA",
+                    "MINJËT": "MINJËT",
+                    "GJARPËRINJ": "GJARPËRINJ",
+                    "BUBURRECA": "BUBURRECA",
+                    "SILVER FISH": "SILVER FISH",
+                    "GREJZA": "GREJZA",
+                    "ÇIMKA": "ÇIMKA",
+                    "PLESHTA": "PLESHTA",
+                    "FURRËTARE": "FURRËTARE"
+                },
+                metoda_types: {
+                    "E LËNGSHME": "E LËNGSHME",
+                    "E NGURTË": "E NGURTË",
+                    "GRANULA": "GRANULA"
+                },
+                unit_types: {
+                    "LITËR": "LITËR",
+                    "ML": "ML",
+                    "GRAM": "GRAM",
+                    "KILOGRAM": "KILOGRAM",
+                    "COPË": "COPË",
+                    "KUTIA": "KUTIA",
+                    "NGJITËS": "NGJITËS"
+                },
+                default_note: "Shërbimi u krye sipas standardeve dhe protokolleve ekologjike të kërkuara për trajtimin e hapësirave."
+            },
+            en: {
+                certificate: "CERTIFICATE",
+                title: "Certificate of Pest Control Services",
+                date: "DATE",
+                time: "TIME",
+                client: "Client",
+                address: "Address",
+                nui: "NUI",
+                m2: "M²",
+                tel: "Tel",
+                email: "Email",
+                service: "Service",
+                pests: "Treated Pests",
+                prep_used: "Used Preparation",
+                unit: "Unit",
+                qty: "Quantity",
+                method: "APPLICATION METHOD",
+                notes: "NOTES / REMARKS",
+                technician: "TECHNICIAN",
+                client_recipient: "CLIENT / RECIPIENT",
+                official_doc: "* Official document | Validity: 6 months",
+                no_prep: "No preparation applied",
+                contract: "CONTRACT",
+                sh_types: {
+                    "KONTROLLË": "CONTROL",
+                    "INTERVENIM": "INTERVENTION",
+                    "DEZINFEKTIM": "DISINFECTION",
+                    "DEZINSEKTIM": "DISINSECTION",
+                    "DERATIZIM": "DERATIZATION"
+                },
+                pest_types: {
+                    "BAKTERE / VIRUS": "BACTERIA / VIRUS",
+                    "MUSHKONJA": "MOSQUITOES",
+                    "MIZA": "FLIES",
+                    "MINJËT": "RODENTS",
+                    "GJARPËRINJ": "SNAKES",
+                    "BUBURRECA": "COCKROACHES",
+                    "SILVER FISH": "SILVER FISH",
+                    "GREJZA": "WASPS",
+                    "ÇIMKA": "BED BUGS",
+                    "PLESHTA": "FLEAS",
+                    "FURRËTARE": "GERMAN COCKROACHES"
+                },
+                metoda_types: {
+                    "E LËNGSHME": "LIQUID",
+                    "E NGURTË": "SOLID",
+                    "GRANULA": "GRANULES"
+                },
+                unit_types: {
+                    "LITËR": "LITER",
+                    "ML": "ML",
+                    "GRAM": "GRAM",
+                    "KILOGRAM": "KG",
+                    "COPË": "PCS",
+                    "KUTIA": "BOX",
+                    "NGJITËS": "GLUE"
+                },
+                default_note: "The service was performed according to the ecological standards and protocols required for space treatment."
+            }
+        };
+
+        let printLanguage = 'sq';
+        let currentPrintDoc = null;
+
+        function setPrintLanguage(lang) {
+            printLanguage = lang;
+            const btnSq = document.getElementById('btn-lang-sq');
+            const btnEn = document.getElementById('btn-lang-en');
+            if (lang === 'en') {
+                btnSq.className = "px-4 py-1.5 rounded-md font-bold text-xs transition-all text-gray-400 hover:text-white";
+                btnEn.className = "px-4 py-1.5 rounded-md font-bold text-xs transition-all bg-green-600 text-white";
+            } else {
+                btnSq.className = "px-4 py-1.5 rounded-md font-bold text-xs transition-all bg-green-600 text-white";
+                btnEn.className = "px-4 py-1.5 rounded-md font-bold text-xs transition-all text-gray-400 hover:text-white";
+            }
+            if (currentPrintDoc) {
+                previewDoc(currentPrintDoc);
+            }
+        }
+
         const SH_TYPES = ["KONTROLLË", "INTERVENIM", "DEZINFEKTIM", "DEZINSEKTIM", "DERATIZIM"];
         const PEST_TYPES = ["BAKTERE / VIRUS", "MUSHKONJA", "MIZA", "MINJËT", "GJARPËRINJ", "BUBURRECA", "SILVER FISH", "GREJZA", "ÇIMKA", "PLESHTA", "FURRËTARE"];
         const METODA_TYPES = ["E LËNGSHME", "E NGURTË", "GRANULA"];
@@ -1217,7 +1361,7 @@
                     <td class="p-4 text-gray-400 text-[10px] font-medium truncate max-w-[150px] italic">${d.te_dhenat_e_userit || 'Sistemi'}</td>
                     <td class="p-4 text-center">
                         <div class="flex items-center justify-center gap-4">
-                            <button onclick="triggerAction('${d.id}', 'view')" class="text-blue-500 hover:text-blue-700 transition-all hover:scale-125" title="Shiko PDF"><i class="fas fa-file-pdf"></i></button>
+                            <button onclick="previewDoc('${d.id}')" class="text-blue-500 hover:text-blue-700 transition-all hover:scale-125" title="Shiko PDF"><i class="fas fa-file-pdf"></i></button>
                             ${isAdmin ? `<button onclick="editDoc(${d.id})" class="text-amber-500 hover:text-amber-700 transition-all hover:scale-125" title="Edito"><i class="fas fa-pencil-alt"></i></button>` : ''}
                             <button onclick="triggerAction('${d.id}', 'share')" class="text-green-600 hover:text-green-800 transition-all hover:scale-125" title="Dërgo në Email"><i class="fas fa-share-alt"></i></button>
                             ${isAdmin ? `<button onclick="deleteDoc(${d.id})" class="text-red-400 hover:text-red-600 transition-all hover:scale-125" title="Fshij"><i class="fas fa-trash-alt"></i></button>` : ''}
@@ -1373,9 +1517,30 @@
             if (typeof idOrData === 'object' && idOrData !== null) {
                 d = idOrData;
             } else {
-                d = db.find(x => x.id === idOrData);
+                d = db.find(x => String(x.id) === String(idOrData));
             }
             if (!d) return;
+
+            // Reset to Albanian if starting preview on a new document
+            if (currentPrintDoc !== d) {
+                printLanguage = 'sq';
+            }
+            currentPrintDoc = d;
+            const t = TRANSLATIONS[printLanguage] || TRANSLATIONS.sq;
+
+            // Sync button classes with the active language
+            const btnSq = document.getElementById('btn-lang-sq');
+            const btnEn = document.getElementById('btn-lang-en');
+            if (btnSq && btnEn) {
+                if (printLanguage === 'en') {
+                    btnSq.className = "px-4 py-1.5 rounded-md font-bold text-xs transition-all text-gray-400 hover:text-white";
+                    btnEn.className = "px-4 py-1.5 rounded-md font-bold text-xs transition-all bg-green-600 text-white";
+                } else {
+                    btnSq.className = "px-4 py-1.5 rounded-md font-bold text-xs transition-all bg-green-600 text-white";
+                    btnEn.className = "px-4 py-1.5 rounded-md font-bold text-xs transition-all text-gray-400 hover:text-white";
+                }
+            }
+
             const dataShqip = d.data.split('-').reverse().join('.');
             // Force Larger Logo: 250px as requested
             const logoHtml = `<div style="text-align: center; margin-bottom: 5px;">
@@ -1388,6 +1553,12 @@
             if (d.shenime && d.shenime.length > 500) {
                 notesFont = "13px";
                 notesMinHeight = "25px";
+            }
+
+            // Translate default note if exact match and language is English
+            let notesValue = d.shenime || '';
+            if (printLanguage === 'en' && notesValue.trim() === DEFAULT_NOTE.trim()) {
+                notesValue = t.default_note;
             }
 
             const getPdfTemplate = () => `
@@ -1406,45 +1577,53 @@
                             </div>
                             <div class="flex justify-center">${logoHtml}</div>
                             <div class="text-right">
-                                <div class="text-[13px] font-black uppercase tracking-tighter text-black leading-none">VËRTETIMI</div>
+                                <div class="text-[13px] font-black uppercase tracking-tighter text-black leading-none">${t.certificate}</div>
                                 <div class="text-[12px] font-bold text-black mt-1 leading-none">${d.nr_v || 'Nr. 000/26'}</div>
                             </div>
                         </div>
 
                         <div class="text-center mb-1">
-                            <h1 class="text-[20px] font-black uppercase tracking-tight text-black m-0 p-0">Vërtetim për kryerjen e shërbimeve DDD</h1>
+                            <h1 class="text-[20px] font-black uppercase tracking-tight text-black m-0 p-0">${t.title}</h1>
                         </div>
 
                         <div class="flex gap-10 mb-1 font-black text-[13px] justify-center bg-gray-50 py-1 rounded-lg text-black">
-                            <div>DATA: <span class="ml-1">${dataShqip}</span></div>
+                            <div>${t.date}: <span class="ml-1">${dataShqip}</span></div>
                             <div class="w-px h-3 bg-gray-300"></div>
-                            <div>KOHA: <span class="ml-1">${d.ora}</span></div>
+                            <div>${t.time}: <span class="ml-1">${d.ora}</span></div>
                         </div>
 
                         <!-- KLIENTI INFO -->
                         <div class="border-2 border-black p-2.5 space-y-1.5 mb-2 rounded-xl bg-white">
-                            <div class="flex items-end"><span class="font-black w-24 uppercase text-[11px] text-gray-400">Klienti:</span><span class="doc-line flex-1 font-black uppercase px-2 text-[14px] border-b border-gray-100">${d.klienti}</span></div>
-                            <div class="flex items-end"><span class="font-black w-24 uppercase text-[11px] text-gray-400">Adresa:</span><span class="doc-line flex-1 font-bold uppercase px-2 text-[13px] border-b border-gray-100">${d.adresa || ''}</span></div>
+                            <div class="flex items-end"><span class="font-black w-24 uppercase text-[11px] text-gray-400">${t.client}:</span><span class="doc-line flex-1 font-black uppercase px-2 text-[14px] border-b border-gray-100">${d.klienti}</span></div>
+                            <div class="flex items-end"><span class="font-black w-24 uppercase text-[11px] text-gray-400">${t.address}:</span><span class="doc-line flex-1 font-bold uppercase px-2 text-[13px] border-b border-gray-100">${d.adresa || ''}</span></div>
                             <div class="grid grid-cols-2 gap-3 mt-1">
-                                <div class="flex items-end"><span class="font-black w-12 uppercase text-[10px] text-gray-400">NUI:</span><span class="doc-line flex-1 font-bold px-2 border-b border-gray-100">${d.nui || ''}</span></div>
-                                <div class="flex items-end"><span class="font-black w-12 uppercase text-[10px] text-gray-400">M2:</span><span class="doc-line flex-1 font-bold px-2 border-b border-gray-100">${d.m2 || ''}</span></div>
-                                <div class="flex items-end"><span class="font-black w-12 uppercase text-[10px] text-gray-400">Tel:</span><span class="doc-line flex-1 font-bold px-2 border-b border-gray-100">${d.tel || ''}</span></div>
-                                <div class="flex items-end"><span class="font-black w-12 uppercase text-[10px] text-gray-400">Email:</span><span class="doc-line flex-1 font-bold px-2 border-b border-gray-100 truncate text-[12px]">${d.email || ''}</span></div>
+                                <div class="flex items-end"><span class="font-black w-12 uppercase text-[10px] text-gray-400">${t.nui}:</span><span class="doc-line flex-1 font-bold px-2 border-b border-gray-100">${d.nui || ''}</span></div>
+                                <div class="flex items-end"><span class="font-black w-12 uppercase text-[10px] text-gray-400">${t.m2}:</span><span class="doc-line flex-1 font-bold px-2 border-b border-gray-100">${d.m2 || ''}</span></div>
+                                <div class="flex items-end"><span class="font-black w-12 uppercase text-[10px] text-gray-400">${t.tel}:</span><span class="doc-line flex-1 font-bold px-2 border-b border-gray-100">${d.tel || ''}</span></div>
+                                <div class="flex items-end"><span class="font-black w-12 uppercase text-[10px] text-gray-400">${t.email}:</span><span class="doc-line flex-1 font-bold px-2 border-b border-gray-100 truncate text-[12px]">${d.email || ''}</span></div>
                             </div>
                         </div>
 
                         <!-- SERVICES & PESTS -->
                         <div class="grid grid-cols-3 gap-2.5 mb-2">
                             <div class="col-span-1 border-2 border-black p-2 rounded-xl bg-white">
-                                <div class="border-b border-gray-100 mb-1 font-black text-black text-[11px] uppercase italic px-1">Sherbimi</div>
+                                <div class="border-b border-gray-100 mb-1 font-black text-black text-[11px] uppercase italic px-1">${t.service}</div>
                                 <div class="grid grid-cols-1 gap-0.5 text-[12px]">
-                                    ${SH_TYPES.map(s => `<div class="flex items-center text-black"><div class="checkbox-box border border-black mr-2 bg-white flex items-center justify-center font-black" style="width:14px; height:14px; font-size:10px;">${d.sherbimet.includes(s) ? '✓' : ''}</div> <span class="font-bold">${s}</span></div>`).join('')}
+                                    ${SH_TYPES.map(s => {
+                                        const isChecked = d.sherbimet.includes(s);
+                                        const labelText = t.sh_types[s] || s;
+                                        return `<div class="flex items-center text-black"><div class="checkbox-box border border-black mr-2 bg-white flex items-center justify-center font-black" style="width:14px; height:14px; font-size:10px;">${isChecked ? '✓' : ''}</div> <span class="font-bold">${labelText}</span></div>`;
+                                    }).join('')}
                                 </div>
                             </div>
                             <div class="col-span-2 border-2 border-black p-2 rounded-xl bg-white">
-                                <div class="border-b border-gray-100 mb-1 font-black text-black text-[11px] uppercase italic px-1">Pestat e trajtuara</div>
+                                <div class="border-b border-gray-100 mb-1 font-black text-black text-[11px] uppercase italic px-1">${t.pests}</div>
                                 <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[11.5px]">
-                                    ${PEST_TYPES.map(p => `<div class="flex items-center text-black"><div class="checkbox-box border border-black mr-2 bg-white flex items-center justify-center font-black" style="width:12px; height:12px; font-size:9px;">${d.pestat.includes(p) ? '✓' : ''}</div> <span class="font-bold">${p}</span></div>`).join('')}
+                                    ${PEST_TYPES.map(p => {
+                                        const isChecked = d.pestat.includes(p);
+                                        const labelText = t.pest_types[p] || p;
+                                        return `<div class="flex items-center text-black"><div class="checkbox-box border border-black mr-2 bg-white flex items-center justify-center font-black" style="width:12px; height:12px; font-size:9px;">${isChecked ? '✓' : ''}</div> <span class="font-bold">${labelText}</span></div>`;
+                                    }).join('')}
                                 </div>
                             </div>
                         </div>
@@ -1454,33 +1633,40 @@
                             <table class="w-full text-[13px] border-collapse bg-white">
                                 <thead>
                                     <tr class="bg-[#78b72a] text-white font-black text-[11px]">
-                                        <th class="p-1.5 text-left uppercase tracking-wider">Preparati i përdorur</th>
-                                        <th class="p-1.5 w-24 text-center uppercase tracking-wider border-l border-white/20">Njësia</th>
-                                        <th class="p-1.5 w-24 text-center uppercase tracking-wider border-l border-white/20">Sasia</th>
+                                        <th class="p-1.5 text-left uppercase tracking-wider">${t.prep_used}</th>
+                                        <th class="p-1.5 w-24 text-center uppercase tracking-wider border-l border-white/20">${t.unit}</th>
+                                        <th class="p-1.5 w-24 text-center uppercase tracking-wider border-l border-white/20">${t.qty}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    ${d.preparatet.length > 0 ? d.preparatet.map(p => `
+                                    ${d.preparatet.length > 0 ? d.preparatet.map(p => {
+                                        const unitText = t.unit_types[p.njesia] || p.njesia;
+                                        return `
                                         <tr class="border-t border-green-50">
                                             <td class="p-1.5 font-black uppercase text-black leading-none">${p.emri}</td>
-                                            <td class="p-1.5 text-center font-bold text-gray-700 border-l border-green-50/50 leading-none">${p.njesia}</td>
+                                            <td class="p-1.5 text-center font-bold text-gray-700 border-l border-green-50/50 leading-none">${unitText}</td>
                                             <td class="p-1.5 text-center font-black text-black border-l border-green-50/50 leading-none">${p.sasia}</td>
-                                        </tr>`).join('') : '<tr><td colspan="3" class="p-2 text-center font-bold text-gray-400 italic text-[11px]">Asnjë preparat i aplikuar</td></tr>'}
+                                        </tr>`;
+                                    }).join('') : `<tr><td colspan="3" class="p-2 text-center font-bold text-gray-400 italic text-[11px]">${t.no_prep}</td></tr>`}
                                 </tbody>
                             </table>
                         </div>
 
                         <!-- METODA -->
                         <div class="mb-2 flex items-center gap-5 text-[13px] font-black border-2 border-[#78b72a] text-black p-2 rounded-xl bg-green-50/10">
-                            <span class="uppercase italic tracking-wider border-r border-[#78b72a] pr-3 text-black">METODA E APLIKIMIT:</span>
-                            ${METODA_TYPES.map(m => `<div class="flex items-center text-black"><div class="checkbox-box border-2 border-[#78b72a] mr-2 bg-white text-black flex items-center justify-center font-black" style="width:18px; height:18px;">${d.metodat.includes(m) ? '✕' : ''}</div> <span class="uppercase text-black">${m}</span></div>`).join('')}
+                            <span class="uppercase italic tracking-wider border-r border-[#78b72a] pr-3 text-black">${t.method}:</span>
+                            ${METODA_TYPES.map(m => {
+                                const isChecked = d.metodat.includes(m);
+                                const labelText = t.metoda_types[m] || m;
+                                return `<div class="flex items-center text-black"><div class="checkbox-box border-2 border-[#78b72a] mr-2 bg-white text-black flex items-center justify-center font-black" style="width:18px; height:18px;">${isChecked ? '✕' : ''}</div> <span class="uppercase text-black">${labelText}</span></div>`;
+                            }).join('')}
                         </div>
 
                         <!-- SHENIME -->
-                        ${d.shenime ? `<div class="mb-2">
-                            <span class="font-black text-[11px] text-gray-400 uppercase italic tracking-widest ml-1">SHËNIME / VËREJTJE:</span>
+                        ${notesValue ? `<div class="mb-2">
+                            <span class="font-black text-[11px] text-gray-400 uppercase italic tracking-widest ml-1">${t.notes}:</span>
                             <div class="p-2 border border-gray-200 min-h-[${notesMinHeight}] rounded-xl font-medium leading-normal bg-white" 
-                                 style="font-size: ${notesFont}; color: black;">${d.shenime}</div>
+                                 style="font-size: ${notesFont}; color: black;">${notesValue}</div>
                         </div>` : ''}
 
                         <!-- BOTTOM PINNED GROUP -->
@@ -1492,22 +1678,22 @@
                                      ${d.sig_tekniku ? `<img src="${d.sig_tekniku}" class="h-10 object-contain" style="filter: brightness(0.8) contrast(1.2);">` : (document.getElementById('sig-tekniku')?.dataset.latest ? `<img src="${document.getElementById('sig-tekniku').dataset.latest}" class="h-10 object-contain" style="filter: brightness(0.8) contrast(1.2);">` : '')}
                                 </div>
                                 ${(d.shfaq_vulen !== false) ? `<img src="https://i.imgur.com/6VuXLnd.png" class="absolute bottom-[-10px] right-[-60px] w-36 h-auto mix-blend-multiply opacity-60 z-10" alt="Vula">` : ''}
-                                <div class="w-full border-t border-black pt-1 uppercase text-black font-black text-[12px]">TEKNIKU</div>
+                                <div class="w-full border-t border-black pt-1 uppercase text-black font-black text-[12px]">${t.technician}</div>
                                 ${d.tekniku_emri ? `<div class="text-[10px] text-gray-400 font-bold">${d.tekniku_emri}</div>` : ''}
                             </div>
                             <div class="flex flex-col items-center">
                                 <div class="h-10 flex items-center justify-center mb-1">
                                     ${d.sig_klienti ? `<img src="${d.sig_klienti}" class="h-10 object-contain" style="filter: brightness(0.8) contrast(1.2);">` : (document.getElementById('sig-klienti')?.dataset.latest ? `<img src="${document.getElementById('sig-klienti').dataset.latest}" class="h-10 object-contain" style="filter: brightness(0.8) contrast(1.2);">` : '')}
                                 </div>
-                                <div class="w-full border-t border-black pt-1 uppercase text-black font-black text-[12px]">KLIENTI / PRANUESI</div>
+                                <div class="w-full border-t border-black pt-1 uppercase text-black font-black text-[12px]">${t.client_recipient}</div>
                                 ${d.pranues_emri ? `<div class="text-[10px] text-gray-400 font-bold">${d.pranues_emri}</div>` : ''}
                             </div>
                         </div>
 
                         <!-- CONTACT INFO - At the absolute bottom -->
                         <div class="text-center pt-2 mt-4 border-t border-black pb-0 relative">
-                            <div class="text-[11px] font-black uppercase mb-0.5 tracking-tight text-black leading-none">NUI: 811320168 | RR. CEN DUGOLLI NR. 22, FERIZAJ | Email: ekologjia@gmail.com | Tel: 049 666 775</div>
-                            <div class="italic text-[10px] font-bold text-gray-400 uppercase tracking-tighter text-center w-full leading-none">* Dokument zyrtar | Vlefshmëria: 6 muaj</div>
+                            <div class="text-[11px] font-black uppercase mb-0.5 tracking-tight text-black leading-none">${printLanguage === 'en' ? 'NUI: 811320168 | CEN DUGOLLI ST. NO. 22, FERIZAJ | Email: ekologjia@gmail.com | Tel: 049 666 775' : 'NUI: 811320168 | RR. CEN DUGOLLI NR. 22, FERIZAJ | Email: ekologjia@gmail.com | Tel: 049 666 775'}</div>
+                            <div class="italic text-[10px] font-bold text-gray-400 uppercase tracking-tighter text-center w-full leading-none">${t.official_doc}</div>
                         </div>
                     </div>
                 </div>`;
@@ -1572,13 +1758,7 @@
             };
 
             try {
-                if (action === 'view') {
-                    // For viewing: use bloburl method to open in new tab
-                    html2pdf().from(actualPrintContainer).set(opt).toPdf().get('pdf').then(function (pdf) {
-                        window.open(pdf.output('bloburl'), '_blank');
-                    });
-                    return;
-                }
+
 
                 // For sharing: Generate PDF Blob with proper async/await
                 const pdfBlob = await html2pdf().from(actualPrintContainer).set(opt).output('blob');

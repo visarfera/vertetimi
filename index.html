@@ -725,6 +725,7 @@
         let padTekniku, padKlienti;
         let currentListMode = 'privat';
         let isEditingNewDraft = false;
+        let savedScrollPosition = null;
 
         // Auth State
         let currentUser = null;
@@ -1306,6 +1307,7 @@
             });
 
             if (!silent) {
+                savedScrollPosition = window.scrollY || document.documentElement.scrollTop;
                 document.getElementById('list-view').classList.add('hidden');
                 document.getElementById('edit-view').classList.remove('hidden');
             }
@@ -1372,9 +1374,12 @@
             btn.innerHTML = `<i class="fas fa-filter"></i> Filtro: Të gjitha`;
             btn.className = "w-full md:w-auto bg-gray-100 hover:bg-gray-200 text-gray-700 border-2 border-gray-300 px-6 py-2 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-sm text-sm";
             document.getElementById('search-input').value = '';
-            renderList();
+            
+            // Unhide list view first so renderList can execute scroll restoration
             ['dashboard-view', 'list-view', 'edit-view', 'print-view', 'client-view', 'clients-mgmt-view'].forEach(id => document.getElementById(id).classList.add('hidden'));
             document.getElementById('list-view').classList.remove('hidden');
+            
+            renderList();
         }
 
         function showPanicList() {
@@ -1420,7 +1425,7 @@
                 const isAdmin = currentRole === 'admin';
                 const isExpired = monthsDiff(d.data) >= 6;
                 return `
-                <tr class="${isExpired ? 'bg-red-50 border-b border-red-200 hover:bg-red-100' : 'border-b border-gray-100 hover:bg-green-50/40'} transition-colors group">
+                <tr id="doc-row-${d.id}" class="${isExpired ? 'bg-red-50 border-b border-red-200 hover:bg-red-100' : 'border-b border-gray-100 hover:bg-green-50/40'} transition-colors group">
                     <td class="p-4"><span class="bg-green-100 text-green-800 px-2 py-1 rounded text-[10px] font-black">${d.nr_v}</span></td>
                     <td class="p-4 font-black text-gray-800 text-xs uppercase">${d.klienti}</td>
                     <td class="p-4 font-bold text-gray-700 text-xs uppercase">${d.adresa || '-'}</td>
@@ -1438,16 +1443,53 @@
                     </td>
                 </tr>`;
             }).join('');
+
+            // Restore scroll position and highlight the target row when unhidden
+            const listVisible = !document.getElementById('list-view').classList.contains('hidden');
+            if (listVisible && savedScrollPosition !== null) {
+                const activeId = currentId;
+                const scrollTarget = savedScrollPosition;
+                savedScrollPosition = null; // Reset immediately to prevent repeat triggers
+                setTimeout(() => {
+                    window.scrollTo({ top: scrollTarget, behavior: 'instant' });
+                    if (activeId) {
+                        const row = document.getElementById(`doc-row-${activeId}`);
+                        if (row) {
+                            row.classList.add('bg-yellow-100');
+                            setTimeout(() => {
+                                row.classList.remove('bg-yellow-100');
+                            }, 2000);
+                        }
+                    }
+                }, 50);
+            } else if (listVisible && currentId) {
+                const activeId = currentId;
+                setTimeout(() => {
+                    const row = document.getElementById(`doc-row-${activeId}`);
+                    if (row) {
+                        row.classList.add('bg-yellow-100');
+                        setTimeout(() => {
+                            row.classList.remove('bg-yellow-100');
+                        }, 2000);
+                    }
+                }, 50);
+            }
         }
 
         function riIntervenim(id) {
             if (!confirm('Dëshironi të bëni ri-intervenimin? Dokumenti do të hapet dhe do të vendoset data e sotme.')) return;
+            
+            savedScrollPosition = window.scrollY || document.documentElement.scrollTop;
             
             // Hapim dokumentin për editim duke anashkaluar kontrollin e rolit (silent=true)
             // editDoc thërret clearForm dhe mbush fushat
             // Për shkak se editDoc ka një setTimeout prej 200ms për nënshkrimet, 
             // ne mund të ndryshojmë datën menjëherë pas thirrjes ose brenda saj.
             editDoc(id, true);
+            
+            // Shfaqim pamjen e editimit pasi editDoc(..., true) nuk e shfaq automatikisht
+            document.getElementById('list-view').classList.add('hidden');
+            document.getElementById('edit-view').classList.remove('hidden');
             
             // Vendosim datën e sotme në fushën e formularit dhe përditësojmë numrin e vërtetimit publik nëse është publik
             const today = new Date().toISOString().split('T')[0];
@@ -1743,16 +1785,16 @@
                             <!-- FOOTER / SIGNATURES - Height reduced -->
                             <div class="mt-auto grid grid-cols-2 gap-10 text-center font-black text-[14px] px-8">
                                 <div class="flex flex-col items-center relative">
-                                <div class="h-10 flex items-center justify-center mb-1">
-                                     ${d.sig_tekniku ? `<img src="${d.sig_tekniku}" class="h-10 object-contain" style="filter: brightness(0.8) contrast(1.2);">` : (document.getElementById('sig-tekniku')?.dataset.latest ? `<img src="${document.getElementById('sig-tekniku').dataset.latest}" class="h-10 object-contain" style="filter: brightness(0.8) contrast(1.2);">` : '')}
+                                <div class="h-20 flex items-center justify-center mb-1">
+                                     ${d.sig_tekniku ? `<img src="${d.sig_tekniku}" class="h-20 object-contain" style="filter: brightness(0.8) contrast(1.2);">` : (document.getElementById('sig-tekniku')?.dataset.latest ? `<img src="${document.getElementById('sig-tekniku').dataset.latest}" class="h-20 object-contain" style="filter: brightness(0.8) contrast(1.2);">` : '')}
                                 </div>
                                 ${(d.shfaq_vulen !== false) ? `<img src="https://i.imgur.com/6VuXLnd.png" class="absolute bottom-[-10px] right-[-60px] w-36 h-auto mix-blend-multiply opacity-60 z-10" alt="Vula">` : ''}
                                 <div class="w-full border-t border-black pt-1 uppercase text-black font-black text-[12px]">${t.technician}</div>
                                 ${d.tekniku_emri ? `<div class="text-[10px] text-gray-400 font-bold">${d.tekniku_emri}</div>` : ''}
                             </div>
                             <div class="flex flex-col items-center">
-                                <div class="h-10 flex items-center justify-center mb-1">
-                                    ${d.sig_klienti ? `<img src="${d.sig_klienti}" class="h-10 object-contain" style="filter: brightness(0.8) contrast(1.2);">` : (document.getElementById('sig-klienti')?.dataset.latest ? `<img src="${document.getElementById('sig-klienti').dataset.latest}" class="h-10 object-contain" style="filter: brightness(0.8) contrast(1.2);">` : '')}
+                                <div class="h-20 flex items-center justify-center mb-1">
+                                    ${d.sig_klienti ? `<img src="${d.sig_klienti}" class="h-20 object-contain" style="filter: brightness(0.8) contrast(1.2);">` : (document.getElementById('sig-klienti')?.dataset.latest ? `<img src="${document.getElementById('sig-klienti').dataset.latest}" class="h-20 object-contain" style="filter: brightness(0.8) contrast(1.2);">` : '')}
                                 </div>
                                 <div class="w-full border-t border-black pt-1 uppercase text-black font-black text-[12px]">${t.client_recipient}</div>
                                 ${d.pranues_emri ? `<div class="text-[10px] text-gray-400 font-bold">${d.pranues_emri}</div>` : ''}

@@ -435,7 +435,7 @@
                                     class="block text-[10px] font-black text-gray-400 uppercase mb-2 tracking-widest">NËNSHKRIMI
                                     I TEKNIKUT</label>
                                 <div
-                                    class="rounded-xl bg-gray-50 h-40 relative border-2 border-dashed border-green-400">
+                                    class="rounded-xl bg-gray-50 h-52 relative border-2 border-dashed border-green-400">
                                     <canvas id="sig-tekniku" class="w-full h-full"></canvas>
                                 </div>
                                 <button onclick="clearSig('tekniku')"
@@ -446,7 +446,7 @@
                                     class="block text-[10px] font-black text-gray-400 uppercase mb-2 tracking-widest">NËNSHKRIMI
                                     I KLIENTIT</label>
                                 <div
-                                    class="rounded-xl bg-gray-50 h-40 relative border-2 border-dashed border-green-400">
+                                    class="rounded-xl bg-gray-50 h-52 relative border-2 border-dashed border-green-400">
                                     <canvas id="sig-klienti" class="w-full h-full"></canvas>
                                 </div>
                                 <button onclick="clearSig('klienti')"
@@ -866,9 +866,14 @@
             return months < 0 ? 0 : months;
         }
 
-        function initPads() {
+        function initPads(callback) {
             const canvasTekniku = document.getElementById('sig-tekniku');
             const canvasKlienti = document.getElementById('sig-klienti');
+
+            if (canvasTekniku && canvasTekniku.offsetWidth === 0) {
+                setTimeout(() => initPads(callback), 100);
+                return;
+            }
 
             const _resize = (c, pad) => {
                 if (!c || !c.offsetWidth || !pad) return;
@@ -882,18 +887,20 @@
             };
 
             if (!padTekniku) {
-                padTekniku = new SignaturePad(canvasTekniku, { backgroundColor: 'rgba(255, 255, 255, 0)', penColor: '#0000FF', minWidth: 2.5, maxWidth: 2.5 });
+                padTekniku = new SignaturePad(canvasTekniku, { backgroundColor: 'rgba(255, 255, 255, 0)', penColor: '#0000FF', minWidth: 0.8, maxWidth: 1.8 });
                 padTekniku.onEnd = () => { canvasTekniku.dataset.latest = padTekniku.toDataURL(); };
                 window.addEventListener("resize", () => _resize(canvasTekniku, padTekniku));
             }
             if (!padKlienti) {
-                padKlienti = new SignaturePad(canvasKlienti, { backgroundColor: 'rgba(255, 255, 255, 0)', penColor: '#0000FF', minWidth: 2.5, maxWidth: 2.5 });
+                padKlienti = new SignaturePad(canvasKlienti, { backgroundColor: 'rgba(255, 255, 255, 0)', penColor: '#0000FF', minWidth: 0.8, maxWidth: 1.8 });
                 padKlienti.onEnd = () => { canvasKlienti.dataset.latest = padKlienti.toDataURL(); };
                 window.addEventListener("resize", () => _resize(canvasKlienti, padKlienti));
             }
 
             _resize(canvasTekniku, padTekniku);
             _resize(canvasKlienti, padKlienti);
+
+            if (callback) callback();
         }
 
         function clearSig(type) {
@@ -974,9 +981,9 @@
 
             if (matches.length > 0) {
                 resultsDiv.innerHTML = matches.map(c => `
-                    <div onclick="selectFuzzyResult('${c.nui}')" class="p-4 hover:bg-green-50 cursor-pointer border-b last:border-0 border-gray-100 flex flex-col gap-1 active:bg-green-100 transition-colors">
+                    <div onclick="selectFuzzyResult('${c._docId}')" class="p-4 hover:bg-green-50 cursor-pointer border-b last:border-0 border-gray-100 flex flex-col gap-1 active:bg-green-100 transition-colors">
                         <div class="font-black text-black uppercase text-sm">${c.klienti}</div>
-                        <div class="text-[11px] text-gray-500 font-bold uppercase">NUI: ${c.nui} | ${c.adresa}</div>
+                        <div class="text-[11px] text-gray-500 font-bold uppercase">NUI: ${c.nui || ''} | ${c.adresa}</div>
                     </div>`).join('');
                 resultsDiv.classList.remove('hidden');
             } else {
@@ -984,8 +991,8 @@
             }
         }
 
-        function selectFuzzyResult(nui) {
-            const c = clientsDb.find(x => x.nui === nui);
+        function selectFuzzyResult(docId) {
+            const c = clientsDb.find(x => x._docId === docId);
             if (c) {
                 document.getElementById('f-klienti').value = c.klienti || '';
                 document.getElementById('f-adresa').value = c.adresa || '';
@@ -1012,10 +1019,21 @@
                     publicClients.map(c => `<option value="${c.klienti}" data-nui="${c.nui || ''}" data-adresa="${c.adresa || ''}">${c.klienti}</option>`).join('');
                 // Auto-fill fields on select change
                 select.onchange = function () {
-                    const opt = this.options[this.selectedIndex];
-                    input.value = this.value;
-                    document.getElementById('f-nui').value = opt.dataset.nui || '';
-                    document.getElementById('f-adresa').value = opt.dataset.adresa || '';
+                    const clientName = this.value;
+                    const c = clientsDb.find(x => x.klienti === clientName && x.tipi === 'publik');
+                    if (c) {
+                        input.value = c.klienti || '';
+                        document.getElementById('f-nui').value = c.nui || '';
+                        document.getElementById('f-adresa').value = c.adresa || '';
+                        document.getElementById('f-m2').value = c.m2 || '';
+                        document.getElementById('f-tel').value = c.tel || '';
+                        document.getElementById('f-email').value = c.email || '';
+                    } else {
+                        const opt = this.options[this.selectedIndex];
+                        input.value = this.value;
+                        document.getElementById('f-nui').value = opt.dataset.nui || '';
+                        document.getElementById('f-adresa').value = opt.dataset.adresa || '';
+                    }
                     updatePublicNumberIfNeeded();
                 };
             } else {
@@ -1177,8 +1195,9 @@
             nrVInput.className = "w-full p-3 bg-white border-2 border-green-200 rounded-xl font-bold outline-none";
 
             setTimeout(() => {
-                initPads();
-                padTekniku.clear(); padKlienti.clear();
+                initPads(() => {
+                    padTekniku.clear(); padKlienti.clear();
+                });
             }, 200);
         }
 
@@ -1193,6 +1212,9 @@
             document.getElementById('custom-prep-container').innerHTML = "";
             FIXED_PREPS.forEach(p => togglePrepRow(p.name.replace(/\s/g, '_'), false));
             document.getElementById('f-shfaq-vulen').checked = true;
+
+            const selectPublik = document.getElementById('f-klienti-select');
+            if (selectPublik) selectPublik.value = "";
         }
 
         function editDoc(id, silent = false) {
@@ -1254,9 +1276,10 @@
             nrVInput.className = "w-full p-3 bg-white border-2 border-green-200 rounded-xl font-bold outline-none";
 
             setTimeout(() => {
-                initPads();
-                if (d.sig_tekniku) padTekniku.fromDataURL(d.sig_tekniku);
-                if (d.sig_klienti) padKlienti.fromDataURL(d.sig_klienti);
+                initPads(() => {
+                    if (d.sig_tekniku) padTekniku.fromDataURL(d.sig_tekniku);
+                    if (d.sig_klienti) padKlienti.fromDataURL(d.sig_klienti);
+                });
             }, 200);
         }
 
@@ -1381,9 +1404,10 @@
             // ne mund të ndryshojmë datën menjëherë pas thirrjes ose brenda saj.
             editDoc(id, false);
             
-            // Vendosim datën e sotme në fushën e formularit
+            // Vendosim datën e sotme në fushën e formularit dhe përditësojmë numrin e vërtetimit publik nëse është publik
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('f-data').value = today;
+            updatePublicNumberIfNeeded();
         }
 
         function updateDashboardCount() {
@@ -1794,6 +1818,15 @@
             initRealtimeListeners();
             // Attach Login Listener
             document.getElementById('login-btn').onclick = doLogin;
+
+            // Close fuzzy results dropdown when clicking outside
+            document.addEventListener('click', function (event) {
+                const fuzzy = document.getElementById('fuzzy-results');
+                const input = document.getElementById('f-klienti');
+                if (fuzzy && !fuzzy.contains(event.target) && event.target !== input) {
+                    fuzzy.classList.add('hidden');
+                }
+            });
 
             // Enable Enter key for login
             ['login-email', 'login-password'].forEach(id => {

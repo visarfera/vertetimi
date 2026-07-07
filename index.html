@@ -724,6 +724,7 @@
         let showOnlyExpired = false;
         let padTekniku, padKlienti;
         let currentListMode = 'privat';
+        let isEditingNewDraft = false;
 
         // Auth State
         let currentUser = null;
@@ -811,6 +812,19 @@
                     return (b.id || 0) - (a.id || 0);
                 });
 
+                // Collision detection for concurrent draft numbers
+                if (currentUser && isEditingNewDraft && !document.getElementById('edit-view').classList.contains('hidden')) {
+                    const currentNrInInput = document.getElementById('f-nr-v').value;
+                    const isTaken = db.some(d => d.nr_v === currentNrInInput && d.id !== currentId && !(d.status === 'reserved' && Date.now() - d.id > 600000));
+                    if (isTaken) {
+                        const newNr = getNextCertNumber();
+                        document.getElementById('f-nr-v').value = newNr;
+                        firestore.collection('vertetimet').doc(String(currentId)).update({ nr_v: newNr }).catch(e => {
+                            console.warn("Failed to update reservation:", e);
+                        });
+                    }
+                }
+
                 if (currentUser) { // Only render if logged in
                     renderList();
                     updateDashboardCount();
@@ -838,6 +852,10 @@
             const viti = new Date().getFullYear().toString().slice(-2); // "26"
             let maxSequence = 0;
             db.forEach(d => {
+                // Ignore expired reservations (older than 10 minutes)
+                if (d.status === 'reserved' && Date.now() - d.id > 600000) {
+                    return;
+                }
                 if (d.nr_v && d.nr_v.includes('/' + viti)) {
                     // Match "Nr. XXX/26" or just "XXX/26"
                     const parts = d.nr_v.match(/(\d+)\//);
@@ -1067,6 +1085,7 @@
             const count = db.filter(d =>
                 d.tipi === 'publik' &&
                 d.klienti === clientName &&
+                !(d.status === 'reserved' && Date.now() - d.id > 600000) &&
                 d.data && new Date(d.data).getFullYear() === year &&
                 Math.floor(new Date(d.data).getMonth() / 3) + 1 === quarter
             ).length;
@@ -1141,6 +1160,8 @@
                 btn.classList.remove('bg-green-800');
                 btn.disabled = false;
 
+                isEditingNewDraft = false; // Reset reservation flag
+
                 // Just Redirect
                 showList();
             }).catch(e => {
@@ -1183,8 +1204,26 @@
             const tani = new Date();
             document.getElementById('f-data').value = tani.toISOString().split('T')[0];
             document.getElementById('f-ora').value = tani.toTimeString().slice(0, 5);
-            document.getElementById('f-nr-v').value = getNextCertNumber();
+            
+            const nextNr = getNextCertNumber();
+            document.getElementById('f-nr-v').value = nextNr;
             document.getElementById('f-shenime').value = DEFAULT_NOTE;
+
+            // Reserve the number in Firestore
+            isEditingNewDraft = true;
+            const reservationDoc = {
+                id: currentId,
+                status: 'reserved',
+                nr_v: nextNr,
+                tipi: 'privat',
+                data: tani.toISOString().split('T')[0],
+                ora: tani.toTimeString().slice(0, 5),
+                te_dhenat_e_userit: currentUser ? (currentUser.displayName || currentUser.email) : 'Sistemi',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            firestore.collection('vertetimet').doc(String(currentId)).set(reservationDoc).catch(e => {
+                console.warn("Failed to create reservation:", e);
+            });
 
             document.getElementById('dashboard-view').classList.add('hidden');
             document.getElementById('list-view').classList.add('hidden');
@@ -1322,6 +1361,12 @@
         }
 
         function showList() {
+            if (isEditingNewDraft) {
+                firestore.collection('vertetimet').doc(String(currentId)).delete().catch(e => {
+                    console.warn("Failed to delete draft reservation:", e);
+                });
+                isEditingNewDraft = false;
+            }
             showOnlyExpired = false;
             const btn = document.getElementById('btn-panic');
             btn.innerHTML = `<i class="fas fa-filter"></i> Filtro: Të gjitha`;
@@ -1818,6 +1863,13 @@
             initRealtimeListeners();
             // Attach Login Listener
             document.getElementById('login-btn').onclick = doLogin;
+
+            // Delete draft reservation on tab closure
+            window.addEventListener('beforeunload', () => {
+                if (isEditingNewDraft && currentId) {
+                    firestore.collection('vertetimet').doc(String(currentId)).delete();
+                }
+            });
 
             // Close fuzzy results dropdown when clicking outside
             document.addEventListener('click', function (event) {

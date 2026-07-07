@@ -343,7 +343,7 @@
                             <div class="md:col-span-2">
                                 <label class="block text-[10px] font-bold text-gray-500 mb-1">E-mail i Klientit</label>
                                 <input type="email" id="f-email"
-                                    class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl font-bold uppercase"
+                                    class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl font-bold"
                                     placeholder="klienti@email.com">
                             </div>
                             <div>
@@ -511,7 +511,7 @@
                         <input type="text" id="c-tel" class="w-full p-3 bg-gray-50 border rounded-xl font-bold"
                             placeholder="TEL">
                     </div>
-                    <input type="email" id="c-email" class="w-full p-3 bg-gray-50 border rounded-xl font-bold uppercase"
+                    <input type="email" id="c-email" class="w-full p-3 bg-gray-50 border rounded-xl font-bold"
                         placeholder="E-MAIL I KLIENTIT">
                 </div>
             </div>
@@ -1443,11 +1443,11 @@
         function riIntervenim(id) {
             if (!confirm('Dëshironi të bëni ri-intervenimin? Dokumenti do të hapet dhe do të vendoset data e sotme.')) return;
             
-            // Hapim dokumentin për editim (silent=false)
+            // Hapim dokumentin për editim duke anashkaluar kontrollin e rolit (silent=true)
             // editDoc thërret clearForm dhe mbush fushat
             // Për shkak se editDoc ka një setTimeout prej 200ms për nënshkrimet, 
             // ne mund të ndryshojmë datën menjëherë pas thirrjes ose brenda saj.
-            editDoc(id, false);
+            editDoc(id, true);
             
             // Vendosim datën e sotme në fushën e formularit dhe përditësojmë numrin e vërtetimit publik nëse është publik
             const today = new Date().toISOString().split('T')[0];

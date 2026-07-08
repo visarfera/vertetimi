@@ -986,6 +986,10 @@
             container.appendChild(div);
         }
 
+        function updateClientDatalist() {
+            // Defined to prevent ReferenceError when called by Firestore listeners
+        }
+
         function handleFuzzySearch(val) {
             const resultsDiv = document.getElementById('fuzzy-results');
             if (!val || val.length < 1) {
@@ -1212,19 +1216,6 @@
 
             // Reserve the number in Firestore
             isEditingNewDraft = true;
-            const reservationDoc = {
-                id: currentId,
-                status: 'reserved',
-                nr_v: nextNr,
-                tipi: 'privat',
-                data: tani.toISOString().split('T')[0],
-                ora: tani.toTimeString().slice(0, 5),
-                te_dhenat_e_userit: currentUser ? (currentUser.displayName || currentUser.email) : 'Sistemi',
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            };
-            firestore.collection('vertetimet').doc(String(currentId)).set(reservationDoc).catch(e => {
-                console.warn("Failed to create reservation:", e);
-            });
 
             document.getElementById('dashboard-view').classList.add('hidden');
             document.getElementById('list-view').classList.add('hidden');

@@ -1248,7 +1248,7 @@
             if (selectPublik) selectPublik.value = "";
         }
 
-        function editDoc(id, silent = false) {
+        function editDoc(id, silent = false, clearSignatures = false) {
             if (currentRole !== 'admin' && !silent) {
                 alert("Vetëm administratorët mund të editojnë vërtetimet.");
                 return;
@@ -1257,6 +1257,18 @@
             if (!d) return;
             currentId = id;
             clearForm();
+
+            const tipi = d.tipi || 'privat';
+            const clientTypeRadio = document.querySelector(`input[name="client_type"][value="${tipi}"]`);
+            if (clientTypeRadio) {
+                clientTypeRadio.checked = true;
+                toggleClientType();
+            }
+            if (tipi === 'publik') {
+                const selectPublik = document.getElementById('f-klienti-select');
+                if (selectPublik) selectPublik.value = d.klienti || "";
+            }
+
             document.getElementById('f-data').value = d.data || "";
             document.getElementById('f-ora').value = d.ora || "";
             document.getElementById('f-nr-v').value = d.nr_v || "";
@@ -1309,8 +1321,15 @@
 
             setTimeout(() => {
                 initPads(() => {
-                    if (d.sig_tekniku) padTekniku.fromDataURL(d.sig_tekniku);
-                    if (d.sig_klienti) padKlienti.fromDataURL(d.sig_klienti);
+                    if (clearSignatures) {
+                        if (padTekniku) padTekniku.clear();
+                        if (padKlienti) padKlienti.clear();
+                        delete document.getElementById('sig-tekniku').dataset.latest;
+                        delete document.getElementById('sig-klienti').dataset.latest;
+                    } else {
+                        if (d.sig_tekniku) padTekniku.fromDataURL(d.sig_tekniku); else if (padTekniku) padTekniku.clear();
+                        if (d.sig_klienti) padKlienti.fromDataURL(d.sig_klienti); else if (padKlienti) padKlienti.clear();
+                    }
                 });
             }, 200);
         }
@@ -1472,20 +1491,33 @@
             
             savedScrollPosition = window.scrollY || document.documentElement.scrollTop;
             
-            // Hapim dokumentin për editim duke anashkaluar kontrollin e rolit (silent=true)
-            // editDoc thërret clearForm dhe mbush fushat
-            // Për shkak se editDoc ka një setTimeout prej 200ms për nënshkrimet, 
-            // ne mund të ndryshojmë datën menjëherë pas thirrjes ose brenda saj.
-            editDoc(id, true);
+            const d = db.find(x => String(x.id) === String(id));
+            if (!d) return;
+
+            // Hapim dokumentin për editim duke anashkaluar kontrollin e rolit (silent=true) dhe duke pastruar nënshkrimet (clearSignatures=true)
+            editDoc(id, true, true);
             
+            // Vendosim një ID të re unike për dokumentin e ri (për të shmangur mbishkrimin e të vjetrit)
+            currentId = Date.now();
+            isEditingNewDraft = true;
+
             // Shfaqim pamjen e editimit pasi editDoc(..., true) nuk e shfaq automatikisht
             document.getElementById('list-view').classList.add('hidden');
             document.getElementById('edit-view').classList.remove('hidden');
             
-            // Vendosim datën e sotme në fushën e formularit dhe përditësojmë numrin e vërtetimit publik nëse është publik
-            const today = new Date().toISOString().split('T')[0];
+            // Vendosim datën dhe orën e sotme
+            const tani = new Date();
+            const today = tani.toISOString().split('T')[0];
             document.getElementById('f-data').value = today;
-            updatePublicNumberIfNeeded();
+            document.getElementById('f-ora').value = tani.toTimeString().slice(0, 5);
+            
+            // Përditësojmë ose gjenerojmë numrin e ri rendor
+            const tipi = d.tipi || 'privat';
+            if (tipi === 'publik') {
+                updatePublicNumberIfNeeded();
+            } else {
+                document.getElementById('f-nr-v').value = getNextCertNumber();
+            }
         }
 
         function updateDashboardCount() {

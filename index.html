@@ -1267,7 +1267,8 @@
                 sig_klienti: (padKlienti && !padKlienti.isEmpty()) ? padKlienti.toDataURL('image/png') : (document.getElementById('sig-klienti').dataset.latest || null),
                 te_dhenat_e_userit: currentUser ? (currentUser.displayName || currentUser.email) : 'Sistemi',
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                createdAt: firebase.firestore.FieldValue.serverTimestamp() // NEW field for explicit sorting requirement
+                // Data e krijimit ruhet nga versioni ekzistues; vendoset vetëm për vërtetimet e reja
+                createdAt: (db.find(x => x.id === currentId) || {}).createdAt || firebase.firestore.FieldValue.serverTimestamp()
             };
 
             const btn = document.querySelector('button[onclick="saveData()"]');

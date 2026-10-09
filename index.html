@@ -190,6 +190,15 @@
                     </div>
                     <span class="text-2xl font-black uppercase tracking-wide">Vërtetimet e Lëshuara</span>
                 </button>
+
+                <button onclick="showReport()" id="btn-report"
+                    class="group bg-gradient-to-br from-blue-600 to-blue-700 text-white p-8 rounded-3xl shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all flex flex-col items-center justify-center gap-4 border-b-4 border-blue-900">
+                    <div
+                        class="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mb-2 group-hover:bg-white/30 transition-colors">
+                        <i class="fas fa-chart-bar text-4xl"></i>
+                    </div>
+                    <span class="text-2xl font-black uppercase tracking-wide">Raporti Mujor</span>
+                </button>
             </div>
             <div
                 class="mt-12 flex items-center justify-center gap-1.5 text-[9px] text-[#a0a0a0] font-bold uppercase tracking-widest pb-4">
@@ -246,6 +255,25 @@
                     <tbody id="docs-list"></tbody>
                 </table>
             </div>
+        </div>
+
+        <!-- REPORT VIEW -->
+        <div id="report-view" class="hidden max-w-5xl mx-auto py-10 px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+                <button onclick="showDashboard()"
+                    class="w-full md:w-auto bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-black uppercase tracking-wide transition-all shadow-lg flex items-center justify-center gap-2">
+                    <i class="fas fa-arrow-left"></i> Kthehu në Menu
+                </button>
+                <div class="flex w-full md:w-auto gap-2">
+                    <input type="month" id="report-month" onchange="renderReport()"
+                        class="flex-1 p-3 bg-white border-2 border-gray-200 rounded-xl font-bold outline-none focus:border-green-500">
+                    <button onclick="exportReportExcel()" id="btn-export-excel"
+                        class="bg-white hover:bg-green-50 text-green-700 border-2 border-green-600 px-5 py-2 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-sm text-sm whitespace-nowrap">
+                        <i class="fas fa-file-excel"></i> Excel
+                    </button>
+                </div>
+            </div>
+            <div id="report-content"></div>
         </div>
 
         <!-- Placeholder for other views to be added by script -->
@@ -743,7 +771,7 @@
 
         // --- AUTH & GATING ---
         function showLogin() {
-            ['dashboard-view', 'list-view', 'edit-view', 'print-view', 'client-view', 'clients-mgmt-view', 'login-view'].forEach(id => {
+            ['dashboard-view', 'list-view', 'edit-view', 'print-view', 'client-view', 'clients-mgmt-view', 'report-view', 'login-view'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.classList.add('hidden');
             });
@@ -1533,7 +1561,7 @@
         }
 
         function showDashboard() {
-            ['dashboard-view', 'list-view', 'edit-view', 'print-view', 'client-view', 'clients-mgmt-view', 'login-view'].forEach(id => {
+            ['dashboard-view', 'list-view', 'edit-view', 'print-view', 'client-view', 'clients-mgmt-view', 'report-view', 'login-view'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.classList.add('hidden');
             });
@@ -1547,6 +1575,8 @@
             const btnBack = document.getElementById('btn-client-form-back');
 
             if (btnManage) btnManage.style.display = isAdmin ? 'flex' : 'none';
+            const btnReport = document.getElementById('btn-report');
+            if (btnReport) btnReport.style.display = isAdmin ? 'flex' : 'none';
             if (btnUserAdd) btnUserAdd.style.display = isAdmin ? 'none' : 'flex';
             if (btnBack) btnBack.onclick = isAdmin ? showClientManagement : showDashboard;
         }
@@ -1564,7 +1594,7 @@
             document.getElementById('search-input').value = '';
             
             // Unhide list view first so renderList can execute scroll restoration
-            ['dashboard-view', 'list-view', 'edit-view', 'print-view', 'client-view', 'clients-mgmt-view'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            ['dashboard-view', 'list-view', 'edit-view', 'print-view', 'client-view', 'clients-mgmt-view', 'report-view'].forEach(id => document.getElementById(id).classList.add('hidden'));
             document.getElementById('list-view').classList.remove('hidden');
             
             renderList();
@@ -1578,7 +1608,7 @@
             btn.className = "w-full md:w-auto bg-gray-800 hover:bg-gray-900 text-white border-2 border-gray-900 px-6 py-2 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-sm text-sm";
             document.getElementById('search-input').value = '';
             renderList();
-            ['dashboard-view', 'list-view', 'edit-view', 'print-view', 'client-view', 'clients-mgmt-view'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            ['dashboard-view', 'list-view', 'edit-view', 'print-view', 'client-view', 'clients-mgmt-view', 'report-view'].forEach(id => document.getElementById(id).classList.add('hidden'));
             document.getElementById('list-view').classList.remove('hidden');
         }
 
@@ -1590,7 +1620,7 @@
             showOnlyExpired = false;
             showArchive = true;
             document.getElementById('search-input').value = '';
-            ['dashboard-view', 'list-view', 'edit-view', 'print-view', 'client-view', 'clients-mgmt-view'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            ['dashboard-view', 'list-view', 'edit-view', 'print-view', 'client-view', 'clients-mgmt-view', 'report-view'].forEach(id => document.getElementById(id).classList.add('hidden'));
             document.getElementById('list-view').classList.remove('hidden');
             renderList();
         }
@@ -1729,13 +1759,180 @@
             if (badge) badge.innerText = count;
         }
 
+        // --- RAPORTI MUJOR ---
+        function showReport() {
+            if (currentRole !== 'admin') return showDashboard();
+            const monthInput = document.getElementById('report-month');
+            if (!monthInput.value) monthInput.value = localDateStr(new Date()).slice(0, 7);
+            ['dashboard-view', 'list-view', 'edit-view', 'print-view', 'client-view', 'clients-mgmt-view', 'report-view'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            document.getElementById('report-view').classList.remove('hidden');
+            renderReport();
+        }
+
+        // "25", "25.50", "25,50 €" -> 25.5 ; tekst pa numër -> null
+        function parseAmount(val) {
+            if (val === undefined || val === null) return null;
+            const m = String(val).replace(',', '.').match(/-?\d+(\.\d+)?/);
+            return m ? parseFloat(m[0]) : null;
+        }
+
+        function fmtNumber(n) {
+            return Number.isInteger(n) ? String(n) : n.toFixed(3).replace(/\.?0+$/, '');
+        }
+
+        // Kontratë: kutia e shënuar ose çmimi i shkruar si tekst ("Kontrate", "Me kontratë"...)
+        function isContractDoc(d) {
+            return !!d.kontrate || /kontrat/i.test(d.cmimi || '');
+        }
+
+        // Gramët/kilogramët dhe ml/litrat mblidhen bashkë (në gram / ml)
+        const UNIT_FAMILY = { 'GRAM': ['pesha', 1], 'KILOGRAM': ['pesha', 1000], 'ML': ['vellimi', 1], 'LITËR': ['vellimi', 1000] };
+
+        function formatPrepTotal(e) {
+            if (e.family === 'pesha') return e.base >= 1000 ? [e.base / 1000, 'KILOGRAM'] : [e.base, 'GRAM'];
+            if (e.family === 'vellimi') return e.base >= 1000 ? [e.base / 1000, 'LITËR'] : [e.base, 'ML'];
+            return [e.base, e.njesia];
+        }
+
+        function computeReport(month) {
+            const docs = db.filter(d => (d.data || '').startsWith(month))
+                .sort((a, b) => (a.data || '').localeCompare(b.data || '') || (a.ora || '').localeCompare(b.ora || ''));
+            const r = { docs, privat: 0, publik: 0, kontrata: 0, teArdhura: 0, sherbimet: {}, pestat: {}, preparatet: {} };
+            docs.forEach(d => {
+                (d.tipi || 'privat') === 'publik' ? r.publik++ : r.privat++;
+                if (isContractDoc(d)) r.kontrata++;
+                else r.teArdhura += parseAmount(d.cmimi) || 0;
+                (d.sherbimet || []).forEach(s => r.sherbimet[s] = (r.sherbimet[s] || 0) + 1);
+                (d.pestat || []).forEach(p => r.pestat[p] = (r.pestat[p] || 0) + 1);
+                (d.preparatet || []).forEach(p => {
+                    const njesia = p.njesia || '';
+                    const [family, factor] = UNIT_FAMILY[njesia] || [njesia, 1];
+                    // NGJITES = NGJITËS: emri krahasohet pa shkronjat ë/ç
+                    const nameKey = (p.emri || '').trim().toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+                    const key = `${nameKey}|${family}`;
+                    const e = r.preparatet[key] || (r.preparatet[key] = { emri: (p.emri || '').trim().toUpperCase(), family, njesia, base: 0, here: 0 });
+                    e.base += (parseAmount(p.sasia) || 0) * factor;
+                    e.here++;
+                });
+            });
+            Object.values(r.preparatet).forEach(e => {
+                [e.sasia, e.njesia] = formatPrepTotal(e);
+                e.sasia = Math.round(e.sasia * 1000) / 1000;
+            });
+            r.teArdhura = Math.round(r.teArdhura * 100) / 100;
+            return r;
+        }
+
+        function renderReport() {
+            const month = document.getElementById('report-month').value;
+            const r = computeReport(month);
+            const [y, m] = month.split('-');
+            const muajt = ['Janar', 'Shkurt', 'Mars', 'Prill', 'Maj', 'Qershor', 'Korrik', 'Gusht', 'Shtator', 'Tetor', 'Nëntor', 'Dhjetor'];
+            const tile = (label, value, color) => `
+                <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-4">
+                    <div class="text-[10px] font-black uppercase tracking-widest text-gray-400">${label}</div>
+                    <div class="text-2xl md:text-3xl font-black ${color} mt-1">${value}</div>
+                </div>`;
+            const countTable = (title, obj) => {
+                const rows = Object.entries(obj).sort((a, b) => b[1] - a[1]);
+                return `<div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-4">
+                    <div class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">${title}</div>
+                    ${rows.length ? rows.map(([k, v]) => `<div class="flex justify-between py-1.5 border-b border-gray-50 last:border-0 text-sm"><span class="font-bold uppercase">${k}</span><span class="font-black">${v}</span></div>`).join('')
+                        : '<div class="text-sm text-gray-400 font-bold">-</div>'}
+                </div>`;
+            };
+            const preps = Object.values(r.preparatet).sort((a, b) => a.emri.localeCompare(b.emri));
+
+            document.getElementById('report-content').innerHTML = `
+                <h2 class="text-2xl font-black uppercase tracking-tight mb-4">${muajt[parseInt(m) - 1]} ${y}</h2>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                    ${tile('Vërtetime', r.docs.length, 'text-gray-900')}
+                    ${tile('Privat / Publik', `${r.privat} / ${r.publik}`, 'text-gray-900')}
+                    ${tile('Të ardhurat', fmtNumber(r.teArdhura) + ' €', 'text-green-600')}
+                    ${tile('Me kontratë', r.kontrata, 'text-blue-600')}
+                </div>
+                <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 mb-6 overflow-x-auto">
+                    <div class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">Preparatet e përdorura</div>
+                    ${preps.length ? `<table class="w-full text-sm">
+                        <thead><tr class="text-left text-[10px] uppercase tracking-wider text-gray-400"><th class="py-2">Preparati</th><th class="py-2 text-right">Sasia totale</th><th class="py-2 text-right">Njësia</th><th class="py-2 text-right">Herë</th></tr></thead>
+                        <tbody>${preps.map(p => `<tr class="border-t border-gray-50"><td class="py-2 font-black uppercase">${p.emri}</td><td class="py-2 text-right font-black">${fmtNumber(p.sasia)}</td><td class="py-2 text-right font-bold text-gray-500">${p.njesia}</td><td class="py-2 text-right font-bold text-gray-500">${p.here}</td></tr>`).join('')}</tbody>
+                    </table>` : '<div class="text-sm text-gray-400 font-bold">Asnjë preparat këtë muaj</div>'}
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    ${countTable('Shërbimet', r.sherbimet)}
+                    ${countTable('Pestat e trajtuara', r.pestat)}
+                </div>`;
+        }
+
+        function loadScript(src) {
+            return new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = src;
+                s.onload = resolve;
+                s.onerror = () => reject(new Error('Nuk u ngarkua: ' + src));
+                document.head.appendChild(s);
+            });
+        }
+
+        async function exportReportExcel() {
+            const btn = document.getElementById('btn-export-excel');
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            btn.disabled = true;
+            try {
+                if (!window.XLSX) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+                const month = document.getElementById('report-month').value;
+                const r = computeReport(month);
+
+                const permbledhje = [
+                    ['Raporti mujor', month],
+                    [],
+                    ['Vërtetime gjithsej', r.docs.length],
+                    ['Privat', r.privat],
+                    ['Publik', r.publik],
+                    ['Me kontratë', r.kontrata],
+                    ['Të ardhurat (€)', r.teArdhura],
+                    [],
+                    ['Shërbimi', 'Herë'],
+                    ...Object.entries(r.sherbimet),
+                    [],
+                    ['Pesti', 'Herë'],
+                    ...Object.entries(r.pestat)
+                ];
+                const preparatet = [['Preparati', 'Sasia totale', 'Njësia', 'Herë të përdorur'],
+                    ...Object.values(r.preparatet).sort((a, b) => a.emri.localeCompare(b.emri)).map(p => [p.emri, p.sasia, p.njesia, p.here])];
+                const vertetimet = [['Nr.', 'Data', 'Ora', 'Tipi', 'Klienti', 'Adresa', 'NUI', 'Tel', 'Shërbimet', 'Pestat', 'Preparatet', 'Çmimi (€)', 'Kontratë', 'Tekniku', 'Lëshuar nga'],
+                    ...r.docs.map(d => [d.nr_v, (d.data || '').split('-').reverse().join('.'), d.ora, d.tipi || 'privat', d.klienti, d.adresa, d.nui, d.tel,
+                        (d.sherbimet || []).join(', '), (d.pestat || []).join(', '),
+                        (d.preparatet || []).map(p => `${p.emri} ${p.sasia || ''} ${p.njesia || ''}`.trim()).join('; '),
+                        isContractDoc(d) ? '' : parseAmount(d.cmimi), isContractDoc(d) ? 'PO' : '',
+                        d.tekniku_emri || '', d.te_dhenat_e_userit || ''])];
+
+                const wb = XLSX.utils.book_new();
+                const addSheet = (rows, name, widths) => {
+                    const ws = XLSX.utils.aoa_to_sheet(rows);
+                    ws['!cols'] = widths.map(w => ({ wch: w }));
+                    XLSX.utils.book_append_sheet(wb, ws, name);
+                };
+                addSheet(permbledhje, 'Përmbledhje', [24, 14]);
+                addSheet(preparatet, 'Preparatet', [36, 14, 12, 16]);
+                addSheet(vertetimet, 'Vërtetimet', [14, 12, 8, 8, 30, 30, 14, 14, 30, 30, 40, 10, 9, 18, 24]);
+                XLSX.writeFile(wb, `Raporti_${month}.xlsx`);
+            } catch (e) {
+                alert('Gabim gjatë eksportit: ' + e.message);
+            } finally {
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+            }
+        }
+
         function showClientManagement() {
             if (currentRole !== 'admin') {
                 showDashboard();
                 return;
             }
             renderClientsTable();
-            ['dashboard-view', 'list-view', 'edit-view', 'print-view', 'client-view', 'clients-mgmt-view', 'login-view'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            ['dashboard-view', 'list-view', 'edit-view', 'print-view', 'client-view', 'clients-mgmt-view', 'report-view', 'login-view'].forEach(id => document.getElementById(id).classList.add('hidden'));
             document.getElementById('clients-mgmt-view').classList.remove('hidden');
         }
 
@@ -1779,7 +1976,7 @@
                 alert("Vetëm administratorët mund të editojnë klientët ekzistues.");
                 return;
             }
-            ['dashboard-view', 'list-view', 'edit-view', 'print-view', 'client-view', 'clients-mgmt-view'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            ['dashboard-view', 'list-view', 'edit-view', 'print-view', 'client-view', 'clients-mgmt-view', 'report-view'].forEach(id => document.getElementById(id).classList.add('hidden'));
             document.getElementById('client-view').classList.remove('hidden');
             ['c-klienti', 'c-nui', 'c-adresa', 'c-m2', 'c-tel', 'c-email'].forEach(id => document.getElementById(id).value = '');
             document.querySelector('input[name="c_tipi"][value="privat"]').checked = true;

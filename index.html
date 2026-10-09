@@ -826,16 +826,15 @@
                     return (b.id || 0) - (a.id || 0);
                 });
 
-                // Collision detection for concurrent draft numbers
-                if (currentUser && isEditingNewDraft && !document.getElementById('edit-view').classList.contains('hidden')) {
+                // Mbrojtje shtesë: nëse numri i draft-it privat u ruajt ndërkohë nga dikush tjetër
+                // (p.sh. rezervimi dështoi offline), rezervojmë një numër të ri
+                const isPrivatDraft = document.querySelector('input[name="client_type"][value="privat"]').checked;
+                if (currentUser && isEditingNewDraft && isPrivatDraft && !document.getElementById('edit-view').classList.contains('hidden')) {
                     const currentNrInInput = document.getElementById('f-nr-v').value;
-                    const isTaken = db.some(d => d.nr_v === currentNrInInput && d.id !== currentId && !(d.status === 'reserved' && Date.now() - d.id > 600000));
+                    const isTaken = db.some(d => d.nr_v === currentNrInInput && d.id !== currentId);
                     if (isTaken) {
-                        const newNr = getNextCertNumber();
-                        document.getElementById('f-nr-v').value = newNr;
-                        firestore.collection('vertetimet').doc(String(currentId)).update({ nr_v: newNr }).catch(e => {
-                            console.warn("Failed to update reservation:", e);
-                        });
+                        reservedNr = null;
+                        assignReservedNumber();
                     }
                 }
 
@@ -881,6 +880,75 @@
             });
             const nextSeq = String(maxSequence + 1).padStart(3, '0');
             return `Nr. ${nextSeq}/${viti}`;
+        }
+
+        // --- REZERVIMI I NUMRIT (privat) ---
+        // Kush e hap i pari "Shto Vërtetim" e merr numrin. Numrat e rezervuar ruhen te
+        // numeruesi/privat-YY { pending: { "<nr>": koha } } dhe ndahen me transaksion,
+        // që dy përdorues të mos marrin kurrë të njëjtin numër.
+        const RESERVATION_TTL = 4 * 60 * 60 * 1000; // rezervimi i braktisur lirohet pas 4 orësh
+        let reservedNr = null;      // { viti, seq } i draft-it aktual
+        let reservePromise = null;  // rezervimi që është duke u bërë
+
+        function formatCertNumber(seq, viti) {
+            return `Nr. ${String(seq).padStart(3, '0')}/${viti}`;
+        }
+
+        // Numri më i lartë i ruajtur këtë vit (getNextCertNumber kthen max + 1)
+        function maxSavedSequence() {
+            return parseInt(getNextCertNumber().match(/(\d+)\//)[1]) - 1;
+        }
+
+        async function reserveCertNumber() {
+            const viti = new Date().getFullYear().toString().slice(-2);
+            const ref = firestore.collection('numeruesi').doc(`privat-${viti}`);
+            try {
+                const seq = await firestore.runTransaction(async tx => {
+                    const snap = await tx.get(ref);
+                    const now = Date.now();
+                    const pending = {};
+                    Object.entries((snap.exists && snap.data().pending) || {}).forEach(([nr, at]) => {
+                        if (now - at < RESERVATION_TTL) pending[nr] = at;
+                    });
+                    const next = Math.max(maxSavedSequence(), ...Object.keys(pending).map(Number)) + 1;
+                    pending[next] = now;
+                    tx.set(ref, { pending });
+                    return next;
+                });
+                reservedNr = { viti, seq };
+                return formatCertNumber(seq, viti);
+            } catch (e) {
+                console.warn("Rezervimi i numrit dështoi, përdoret numri lokal:", e);
+                reservedNr = null;
+                return getNextCertNumber();
+            }
+        }
+
+        // Rezervon (një herë) numrin për draft-in aktual dhe e vendos në fushë
+        function assignReservedNumber() {
+            const input = document.getElementById('f-nr-v');
+            if (reservedNr) {
+                input.value = formatCertNumber(reservedNr.seq, reservedNr.viti);
+                return;
+            }
+            input.value = getNextCertNumber(); // vlerësim i përkohshëm derisa të vijë rezervimi
+            if (!reservePromise) {
+                reservePromise = reserveCertNumber().finally(() => { reservePromise = null; });
+            }
+            reservePromise.then(nr => {
+                const isPrivat = document.querySelector('input[name="client_type"][value="privat"]').checked;
+                if (isEditingNewDraft && isPrivat) input.value = nr;
+            });
+        }
+
+        // Liron numrin kur draft-i anulohet ose kalon në Publik
+        function releaseCertNumber() {
+            if (!reservedNr) return;
+            const { viti, seq } = reservedNr;
+            reservedNr = null;
+            firestore.collection('numeruesi').doc(`privat-${viti}`)
+                .update(new firebase.firestore.FieldPath('pending', String(seq)), firebase.firestore.FieldValue.delete())
+                .catch(e => console.warn("Lirimi i numrit dështoi:", e));
         }
 
         function enableManualNrEdit() {
@@ -1078,6 +1146,7 @@
                 input.classList.add('hidden');
                 select.classList.remove('hidden');
                 fuzzy.classList.add('hidden');
+                if (isEditingNewDraft) releaseCertNumber(); // publiku ka numërim tjetër
                 // Dynamic Populate from DB
                 const publicClients = clientsDb.filter(c => c.tipi === 'publik');
                 select.innerHTML = '<option value="" disabled selected>ZGJIDH INSTITUCIONIN...</option>' +
@@ -1104,7 +1173,8 @@
             } else {
                 input.classList.remove('hidden');
                 select.classList.add('hidden');
-                document.getElementById('f-nr-v').value = getNextCertNumber();
+                if (isEditingNewDraft) assignReservedNumber();
+                else document.getElementById('f-nr-v').value = getNextCertNumber();
             }
         }
 
@@ -1153,6 +1223,10 @@
         }
 
         function saveData() {
+            if (reservePromise) {
+                alert("Numri i vërtetimit po rezervohet. Provoni përsëri pas një çasti.");
+                return;
+            }
             const preps = Array.from(document.querySelectorAll('.prep-check:checked')).map(c => {
                 const sid = c.dataset.name.replace(/\s/g, '_');
                 const row = document.getElementById(`qty-row-${sid}`);
@@ -1208,6 +1282,7 @@
                 btn.disabled = false;
 
                 isEditingNewDraft = false; // Reset reservation flag
+                reservedNr = null; // numri u përdor; rezervimi mbetet derisa të skadojë
 
                 // Just Redirect
                 showList();
@@ -1244,20 +1319,16 @@
         }
 
         function createNew() {
+            releaseCertNumber(); // nëse ka mbetur rezervim nga një draft i mëparshëm
             currentId = Date.now();
+            isEditingNewDraft = true;
             clearForm();
-            document.querySelector('input[name="client_type"][value="privat"]').click();
-            toggleClientType(); // Ensure UI and numbering reset correctly
+            document.querySelector('input[name="client_type"][value="privat"]').checked = true;
+            toggleClientType(); // UI + rezervimi i numrit
             const tani = new Date();
             document.getElementById('f-data').value = localDateStr(tani);
             document.getElementById('f-ora').value = tani.toTimeString().slice(0, 5);
-            
-            const nextNr = getNextCertNumber();
-            document.getElementById('f-nr-v').value = nextNr;
             document.getElementById('f-shenime').value = DEFAULT_NOTE;
-
-            // Reserve the number in Firestore
-            isEditingNewDraft = true;
 
             document.getElementById('dashboard-view').classList.add('hidden');
             document.getElementById('list-view').classList.add('hidden');
@@ -1419,9 +1490,7 @@
 
         function showList() {
             if (isEditingNewDraft) {
-                firestore.collection('vertetimet').doc(String(currentId)).delete().catch(e => {
-                    console.warn("Failed to delete draft reservation:", e);
-                });
+                releaseCertNumber();
                 isEditingNewDraft = false;
             }
             showOnlyExpired = false;
@@ -1586,7 +1655,7 @@
             if (tipi === 'publik') {
                 updatePublicNumberIfNeeded();
             } else {
-                document.getElementById('f-nr-v').value = getNextCertNumber();
+                assignReservedNumber();
             }
         }
 
@@ -2001,9 +2070,7 @@
 
             // Delete draft reservation on tab closure
             window.addEventListener('beforeunload', () => {
-                if (isEditingNewDraft && currentId) {
-                    firestore.collection('vertetimet').doc(String(currentId)).delete();
-                }
+                if (isEditingNewDraft) releaseCertNumber();
             });
 
             // Close fuzzy results dropdown when clicking outside

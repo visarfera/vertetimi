@@ -17,6 +17,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 
     <!-- Firebase Compat SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -566,6 +567,7 @@
                 client_recipient: "KLIENTI / PRANUESI",
                 official_doc: "* Dokument zyrtar",
                 valid_until: "Vlen deri më",
+                scan_verify: "Skano për<br>verifikim",
                 no_prep: "Asnjë preparat i aplikuar",
                 contract: "KONTRATË",
                 sh_types: {
@@ -626,6 +628,7 @@
                 client_recipient: "CLIENT / RECIPIENT",
                 official_doc: "* Official document",
                 valid_until: "Valid until",
+                scan_verify: "Scan to<br>verify",
                 no_prep: "No preparation applied",
                 contract: "CONTRACT",
                 sh_types: {
@@ -984,6 +987,41 @@
             return localDateStr(target);
         }
 
+        // --- VERIFIKIMI ME QR ---
+        // Çdo vërtetim ka një kod të rastësishëm (verify_token). Kopja publike te
+        // verifikimi/{token} lexohet pa login vetëm nga kush e ka kodin (QR-në).
+        const VERIFY_BASE_URL = 'https://vertetimi.ekologjia.llc/verifiko.html';
+
+        function generateVerifyToken() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+            return Array.from(crypto.getRandomValues(new Uint8Array(20)), b => chars[b % chars.length]).join('');
+        }
+
+        function verifyUrl(token) {
+            return `${VERIFY_BASE_URL}?t=${token}`;
+        }
+
+        function qrDataUrl(text) {
+            const qr = qrcode(0, 'M');
+            qr.addData(text);
+            qr.make();
+            return qr.createDataURL(4, 0);
+        }
+
+        // Vetëm të dhënat që shfaqen në faqen publike të verifikimit
+        function publicVerificationData(d) {
+            return {
+                nr_v: d.nr_v || '',
+                klienti: d.klienti || '',
+                adresa: d.adresa || '',
+                tipi: d.tipi || 'privat',
+                data: d.data || '',
+                skadon: d.data ? expiryDateStr(d.data) : '',
+                sherbimet: d.sherbimet || [],
+                pestat: d.pestat || []
+            };
+        }
+
         // Klienti identifikohet me emër + adresë
         function clientKey(d) {
             return `${(d.klienti || '').trim().toUpperCase()}|${(d.adresa || '').trim().toUpperCase()}`;
@@ -1254,6 +1292,7 @@
                 }
             });
 
+            const existing = db.find(x => x.id === currentId);
             const doc = {
                 id: currentId,
                 tipi: document.querySelector('input[name="client_type"]:checked').value,
@@ -1281,7 +1320,8 @@
                 te_dhenat_e_userit: currentUser ? (currentUser.displayName || currentUser.email) : 'Sistemi',
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                 // Data e krijimit ruhet nga versioni ekzistues; vendoset vetëm për vërtetimet e reja
-                createdAt: (db.find(x => x.id === currentId) || {}).createdAt || firebase.firestore.FieldValue.serverTimestamp()
+                createdAt: (existing || {}).createdAt || firebase.firestore.FieldValue.serverTimestamp(),
+                verify_token: (existing || {}).verify_token || generateVerifyToken()
             };
 
             const btn = document.querySelector('button[onclick="saveData()"]');
@@ -1297,6 +1337,10 @@
 
                 isEditingNewDraft = false; // Reset reservation flag
                 reservedNr = null; // numri u përdor; rezervimi mbetet derisa të skadojë
+
+                // Kopja publike për verifikimin me QR
+                firestore.collection('verifikimi').doc(doc.verify_token).set(publicVerificationData(doc))
+                    .catch(e => console.warn("Ruajtja e verifikimit dështoi:", e));
 
                 // Just Redirect
                 showList();
@@ -1470,8 +1514,13 @@
                 return;
             }
             if (!confirm("A jeni i sigurt që dëshironi të fshini këtë vërtetim? Ky veprim nuk mund të kthehet.")) return;
+            const d = db.find(x => String(x.id) === String(id));
             firestore.collection('vertetimet').doc(String(id)).delete()
-                .then(() => alert("Vërtetimi u fshie me sukses!"))
+                .then(() => {
+                    // QR-ja e këtij vërtetimi nuk duhet të tregojë më "i vlefshëm"
+                    if (d && d.verify_token) firestore.collection('verifikimi').doc(d.verify_token).delete().catch(() => {});
+                    alert("Vërtetimi u fshi me sukses!");
+                })
                 .catch(e => alert("Gabim gjatë fshirjes: " + e.message));
         }
 
@@ -1861,8 +1910,9 @@
                     <div class="relative z-10 flex flex-col h-full flex-1">
                         <!-- HEADER - Absolute width logo and tighter spacing -->
                         <div class="grid grid-cols-3 items-center mb-1 pt-2">
-                            <div class="text-[10px] font-extrabold uppercase leading-tight text-gray-400">
-                                <!-- Top Left Cleaned -->
+                            <div class="flex items-center gap-2">
+                                ${d.verify_token ? `<img src="${qrDataUrl(verifyUrl(d.verify_token))}" style="width: 72px; height: 72px; image-rendering: pixelated;" alt="QR">
+                                <div class="text-[8px] font-bold uppercase leading-tight text-gray-500">${t.scan_verify}</div>` : ''}
                             </div>
                             <div class="flex justify-center">${logoHtml}</div>
                             <div class="text-right">

@@ -22,6 +22,15 @@ service cloud.firestore {
       allow update, delete: if isAdmin();  // editimi dhe fshirja vetëm admin
     }
 
+    // Kopja publike për verifikimin me QR: lexohet pa login vetëm me kodin e saktë,
+    // por askush nuk mund t'i listojë të gjitha
+    match /verifikimi/{token} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if signedIn();
+      allow update, delete: if isAdmin();
+    }
+
     // Rezervimi i numrave të vërtetimeve (numeruesi/privat-YY)
     match /numeruesi/{docId} {
       allow read, write: if signedIn();

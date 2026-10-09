@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="sq">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
+    <title>Verifikimi i Vërtetimit - Ekologjia DDD</title>
+    <link rel="apple-touch-icon" href="https://i.imgur.com/r1TRxoo.png">
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+
+        :root {
+            --green: #16a34a;
+            --green-soft: #f0fdf4;
+            --green-border: #bbf7d0;
+            --red: #dc2626;
+            --red-soft: #fef2f2;
+            --red-border: #fecaca;
+            --text: #111827;
+            --muted: #6b7280;
+            --line: #e5e7eb;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+            background: #f3f4f6;
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            padding: 24px 16px;
+        }
+
+        .card {
+            width: 100%;
+            max-width: 480px;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            align-self: flex-start;
+        }
+
+        .header { text-align: center; padding: 24px 24px 8px; }
+        .header img { width: 180px; height: auto; }
+        .header h1 { font-size: 13px; font-weight: 900; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin: 12px 0 0; }
+
+        .status { margin: 16px 24px; padding: 20px; border-radius: 16px; text-align: center; border: 2px solid; }
+        .status .icon { font-size: 40px; line-height: 1; }
+        .status .title { font-size: 20px; font-weight: 900; text-transform: uppercase; margin-top: 8px; }
+        .status .sub { font-size: 13px; font-weight: 600; margin-top: 4px; }
+        .status.valid { background: var(--green-soft); border-color: var(--green-border); color: var(--green); }
+        .status.expired { background: var(--red-soft); border-color: var(--red-border); color: var(--red); }
+        .status.missing { background: #f9fafb; border-color: var(--line); color: var(--muted); }
+
+        .rows { padding: 4px 24px 8px; }
+        .row { display: flex; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+        .row:last-child { border-bottom: none; }
+        .row .k { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); flex-shrink: 0; }
+        .row .v { font-size: 14px; font-weight: 700; text-align: right; text-transform: uppercase; word-break: break-word; }
+
+        .footer { background: #f9fafb; border-top: 1px solid var(--line); padding: 16px 24px; text-align: center; font-size: 11px; font-weight: 700; color: var(--muted); line-height: 1.6; }
+        .loading { padding: 48px 24px; text-align: center; color: var(--muted); font-weight: 700; }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <div class="header">
+            <img src="https://i.imgur.com/XcrU0AI.png" alt="Ekologjia">
+            <h1>Verifikimi i Vërtetimit</h1>
+        </div>
+        <div id="content" class="loading">Duke kontrolluar…</div>
+        <div class="footer">
+            EKOLOGJIA SHPK · NUI: 811320168<br>
+            Rr. Cen Dugolli Nr. 22, Ferizaj · Tel: 049 666 775 · ekologjia@gmail.com
+        </div>
+    </div>
+
+    <script>
+        firebase.initializeApp({
+            apiKey: 'AIzaSyC8LTR7VlCNey0hH8j8jJfgW_IYj7YTABY',
+            authDomain: 'vertetimi-eb5b6.firebaseapp.com',
+            projectId: 'vertetimi-eb5b6',
+            storageBucket: 'vertetimi-eb5b6.firebasestorage.app',
+            messagingSenderId: '130594879757',
+            appId: '1:130594879757:web:4f061f88f42aa092af5844'
+        });
+
+        const content = document.getElementById('content');
+
+        function esc(s) {
+            return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        function fmtDate(iso) {
+            return iso ? iso.split('-').reverse().join('.') : '-';
+        }
+
+        function todayStr() {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+
+        function showMissing(msg) {
+            content.className = '';
+            content.innerHTML = `<div class="status missing"><div class="icon">✖</div>
+                <div class="title">Nuk u gjet</div><div class="sub">${esc(msg)}</div></div>`;
+        }
+
+        const token = new URLSearchParams(location.search).get('t');
+
+        if (!token || !/^[A-Za-z0-9]{10,40}$/.test(token)) {
+            showMissing('Kodi QR nuk është i vlefshëm.');
+        } else {
+            firebase.firestore().collection('verifikimi').doc(token).get().then(snap => {
+                if (!snap.exists) {
+                    showMissing('Ky vërtetim nuk ekziston në sistemin tonë.');
+                    return;
+                }
+                const d = snap.data();
+                const valid = d.skadon && todayStr() <= d.skadon;
+                const rows = [
+                    ['Nr. i vërtetimit', d.nr_v],
+                    ['Klienti', d.klienti],
+                    ['Adresa', d.adresa],
+                    ['Data e lëshimit', fmtDate(d.data)],
+                    ['Vlen deri më', fmtDate(d.skadon)],
+                    ['Shërbimet', (d.sherbimet || []).join(', ')],
+                    ['Pestat e trajtuara', (d.pestat || []).join(', ')]
+                ].filter(([, v]) => v);
+
+                content.className = '';
+                content.innerHTML = `
+                    <div class="status ${valid ? 'valid' : 'expired'}">
+                        <div class="icon">${valid ? '✔' : '⚠'}</div>
+                        <div class="title">${valid ? 'Vërtetim i vlefshëm' : 'Vërtetim i skaduar'}</div>
+                        <div class="sub">${valid ? 'Valid certificate' : 'Expired on ' + fmtDate(d.skadon)}</div>
+                    </div>
+                    <div class="rows">
+                        ${rows.map(([k, v]) => `<div class="row"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div></div>`).join('')}
+                    </div>`;
+            }).catch(() => {
+                showMissing('Verifikimi nuk mund të kryhet tani. Provoni përsëri më vonë.');
+            });
+        }
+    </script>
+</body>
+
+</html>

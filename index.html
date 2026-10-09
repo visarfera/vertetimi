@@ -474,8 +474,14 @@
                                     class="rounded-xl bg-gray-50 h-60 relative border-2 border-dashed border-green-400">
                                     <canvas id="sig-tekniku" class="w-full h-full"></canvas>
                                 </div>
-                                <button onclick="clearSig('tekniku')"
-                                    class="text-[10px] text-green-600 font-medium mt-2">Pastro</button>
+                                <div class="flex justify-between items-center gap-3 mt-2">
+                                    <button onclick="clearSig('tekniku')"
+                                        class="text-[10px] text-green-600 font-medium">Pastro</button>
+                                    <label class="flex items-center gap-2 cursor-pointer text-[10px] font-bold text-gray-500">
+                                        <input type="checkbox" id="f-mbaj-nenshkrimin" class="w-4 h-4 accent-green-600">
+                                        Mbaje mend nënshkrimin tim në këtë pajisje
+                                    </label>
+                                </div>
                             </div>
                             <div>
                                 <label
@@ -1123,6 +1129,37 @@
             if (callback) callback();
         }
 
+        // --- TEKNIKU I MBAJTUR MEND (vetëm në këtë pajisje, për çdo përdorues) ---
+        function technicianKey() {
+            return currentUser ? `tekniku_${currentUser.uid}` : null;
+        }
+
+        function loadSavedTechnician() {
+            try { return JSON.parse(localStorage.getItem(technicianKey()) || 'null'); } catch (e) { return null; }
+        }
+
+        // Plotëson emrin dhe nënshkrimin e teknikut te një vërtetim i ri
+        function applySavedTechnician() {
+            const saved = loadSavedTechnician();
+            document.getElementById('f-mbaj-nenshkrimin').checked = !!(saved && saved.sig);
+            if (!saved) return;
+            if (saved.emri) document.getElementById('f-tekniku-emri').value = saved.emri;
+            if (saved.sig && padTekniku) {
+                padTekniku.fromDataURL(saved.sig);
+                document.getElementById('sig-tekniku').dataset.latest = saved.sig;
+            }
+        }
+
+        // Thirret pas ruajtjes së një vërtetimi të ri
+        function rememberTechnician(doc) {
+            const key = technicianKey();
+            if (!key) return;
+            const keepSig = document.getElementById('f-mbaj-nenshkrimin').checked;
+            try {
+                localStorage.setItem(key, JSON.stringify({ emri: doc.tekniku_emri || '', sig: keepSig ? doc.sig_tekniku : null }));
+            } catch (e) { /* localStorage i bllokuar: thjesht nuk mbahet mend */ }
+        }
+
         function clearSig(type) {
             if (type === 'tekniku') { padTekniku.clear(); delete document.getElementById('sig-tekniku').dataset.latest; }
             else { padKlienti.clear(); delete document.getElementById('sig-klienti').dataset.latest; }
@@ -1377,6 +1414,7 @@
             firestore.collection('vertetimet').doc(String(doc.id)).set(doc).then(() => {
                 setSaving(false);
 
+                if (isEditingNewDraft) rememberTechnician(doc);
                 isEditingNewDraft = false; // Reset reservation flag
                 reservedNr = null; // numri u përdor; rezervimi mbetet derisa të skadojë
 
@@ -1439,6 +1477,7 @@
             setTimeout(() => {
                 initPads(() => {
                     padTekniku.clear(); padKlienti.clear();
+                    applySavedTechnician();
                 });
             }, 200);
         }
@@ -1540,6 +1579,7 @@
                         if (padKlienti) padKlienti.clear();
                         delete document.getElementById('sig-tekniku').dataset.latest;
                         delete document.getElementById('sig-klienti').dataset.latest;
+                        applySavedTechnician(); // Ri-Intervenim = vërtetim i ri
                     } else {
                         if (d.sig_tekniku) padTekniku.fromDataURL(d.sig_tekniku); else if (padTekniku) padTekniku.clear();
                         if (d.sig_klienti) padKlienti.fromDataURL(d.sig_klienti); else if (padKlienti) padKlienti.clear();

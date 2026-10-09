@@ -1240,6 +1240,9 @@
             if (document.getElementById('f-kontrate')) { document.getElementById('f-kontrate').checked = false; document.getElementById('f-cmimi').disabled = false; }
             if (padTekniku) padTekniku.clear();
             if (padKlienti) padKlienti.clear();
+            // Fshijmë edhe kopjen e fundit të nënshkrimit, që të mos kalojë te vërtetimi tjetër
+            delete document.getElementById('sig-tekniku').dataset.latest;
+            delete document.getElementById('sig-klienti').dataset.latest;
             document.getElementById('custom-prep-container').innerHTML = "";
             FIXED_PREPS.forEach(p => togglePrepRow(p.name.replace(/\s/g, '_'), false));
             document.getElementById('f-shfaq-vulen').checked = true;
@@ -1809,7 +1812,7 @@
                             <div class="mt-auto grid grid-cols-2 gap-10 text-center font-black text-[14px] px-8">
                                 <div class="flex flex-col items-center relative">
                                 <div class="h-20 flex items-center justify-center mb-1">
-                                     ${d.sig_tekniku ? `<img src="${d.sig_tekniku}" class="h-20 object-contain" style="filter: brightness(0.8) contrast(1.2);">` : (document.getElementById('sig-tekniku')?.dataset.latest ? `<img src="${document.getElementById('sig-tekniku').dataset.latest}" class="h-20 object-contain" style="filter: brightness(0.8) contrast(1.2);">` : '')}
+                                     ${d.sig_tekniku ? `<img src="${d.sig_tekniku}" class="h-20 object-contain" style="filter: brightness(0.8) contrast(1.2);">` : ''}
                                 </div>
                                 ${(d.shfaq_vulen !== false) ? `<img src="https://i.imgur.com/6VuXLnd.png" class="absolute bottom-[-10px] right-[-60px] w-36 h-auto mix-blend-multiply opacity-60 z-10" alt="Vula">` : ''}
                                 <div class="w-full border-t border-black pt-1 uppercase text-black font-black text-[12px]">${t.technician}</div>
@@ -1817,7 +1820,7 @@
                             </div>
                             <div class="flex flex-col items-center">
                                 <div class="h-20 flex items-center justify-center mb-1">
-                                    ${d.sig_klienti ? `<img src="${d.sig_klienti}" class="h-20 object-contain" style="filter: brightness(0.8) contrast(1.2);">` : (document.getElementById('sig-klienti')?.dataset.latest ? `<img src="${document.getElementById('sig-klienti').dataset.latest}" class="h-20 object-contain" style="filter: brightness(0.8) contrast(1.2);">` : '')}
+                                    ${d.sig_klienti ? `<img src="${d.sig_klienti}" class="h-20 object-contain" style="filter: brightness(0.8) contrast(1.2);">` : ''}
                                 </div>
                                 <div class="w-full border-t border-black pt-1 uppercase text-black font-black text-[12px]">${t.client_recipient}</div>
                                 ${d.pranues_emri ? `<div class="text-[10px] text-gray-400 font-bold">${d.pranues_emri}</div>` : ''}

@@ -564,7 +564,8 @@
                 notes: "SHËNIME / VËREJTJE",
                 technician: "TEKNIKU",
                 client_recipient: "KLIENTI / PRANUESI",
-                official_doc: "* Dokument zyrtar | Vlefshmëria: 6 muaj",
+                official_doc: "* Dokument zyrtar",
+                valid_until: "Vlen deri më",
                 no_prep: "Asnjë preparat i aplikuar",
                 contract: "KONTRATË",
                 sh_types: {
@@ -623,7 +624,8 @@
                 notes: "NOTES / REMARKS",
                 technician: "TECHNICIAN",
                 client_recipient: "CLIENT / RECIPIENT",
-                official_doc: "* Official document | Validity: 6 months",
+                official_doc: "* Official document",
+                valid_until: "Valid until",
                 no_prep: "No preparation applied",
                 contract: "CONTRACT",
                 sh_types: {
@@ -969,6 +971,17 @@
         // Data lokale "YYYY-MM-DD" (toISOString jep datën UTC, që pas mesnate është dita e djeshme)
         function localDateStr(date) {
             return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        }
+
+        // Data e skadimit: data e lëshimit + 6 muaj ("YYYY-MM-DD").
+        // Nëse muaji i ri s'e ka atë ditë (p.sh. 31 gusht -> shkurt), merret dita e fundit e muajit.
+        const VLEFSHMERIA_MUAJ = 6;
+        function expiryDateStr(dateStr) {
+            const [y, m, d] = dateStr.split('-').map(Number);
+            const target = new Date(y, m - 1 + VLEFSHMERIA_MUAJ, 1);
+            const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+            target.setDate(Math.min(d, lastDay));
+            return localDateStr(target);
         }
 
         // Klienti identifikohet me emër + adresë
@@ -1817,6 +1830,7 @@
             }
 
             const dataShqip = (d.data || '').split('-').reverse().join('.');
+            const dataSkadimit = d.data ? expiryDateStr(d.data).split('-').reverse().join('.') : '';
             // Force Larger Logo: 250px as requested
             const logoHtml = `<div style="text-align: center; margin-bottom: 5px;">
                                 <img src="${FIXED_LOGO_URL}" style="width: 250px; height: auto; display: block; margin: 0 auto;">
@@ -1865,6 +1879,8 @@
                             <div>${t.date}: <span class="ml-1">${dataShqip}</span></div>
                             <div class="w-px h-3 bg-gray-300"></div>
                             <div>${t.time}: <span class="ml-1">${d.ora}</span></div>
+                            ${dataSkadimit ? `<div class="w-px h-3 bg-gray-300"></div>
+                            <div>${t.valid_until.toUpperCase()}: <span class="ml-1">${dataSkadimit}</span></div>` : ''}
                         </div>
 
                         <!-- KLIENTI INFO -->

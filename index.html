@@ -135,69 +135,69 @@
         </div>
 
         <!-- DASHBOARD VIEW -->
-        <div id="dashboard-view" class="min-h-screen flex flex-col items-center justify-center p-6 pb-20">
-            <div class="w-full flex justify-end items-center px-6 absolute top-6">
-                <span id="dash-user-email"
-                    class="text-gray-400 font-bold text-[10px] uppercase tracking-wider mr-4"></span>
-                <button onclick="doLogout()"
-                    class="text-gray-400 hover:text-red-500 font-bold text-xs uppercase tracking-widest flex items-center gap-2 transition-colors">
-                    <i class="fas fa-sign-out-alt"></i> Dil
-                </button>
-            </div>
-            <div class="mb-10 text-center mt-10">
-                <h1 class="text-4xl font-black text-gray-900 italic tracking-tighter mb-2">EKOLOGJIA <span
+        <div id="dashboard-view" class="min-h-screen flex flex-col items-center p-4 md:p-6 pb-20">
+            <div class="w-full max-w-4xl flex justify-between items-center gap-4 pt-2">
+                <h1 class="text-2xl md:text-3xl font-black text-gray-900 italic tracking-tighter">EKOLOGJIA <span
                         class="text-green-600">SHPK</span></h1>
-                <p class="text-gray-500 font-medium text-lg">Paneli i Kontrollit</p>
+                <div class="flex items-center gap-3 min-w-0">
+                    <span id="dash-user-email"
+                        class="hidden sm:inline text-gray-400 font-bold text-[10px] uppercase tracking-wider truncate"></span>
+                    <button onclick="doLogout()"
+                        class="text-gray-400 hover:text-red-500 font-bold text-xs uppercase tracking-widest flex items-center gap-2 transition-colors flex-shrink-0">
+                        <i class="fas fa-sign-out-alt"></i> Dil
+                    </button>
+                </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl">
-                <button onclick="createNew()"
-                    class="group bg-gradient-to-br from-green-600 to-green-700 text-white p-8 rounded-3xl shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all flex flex-col items-center justify-center gap-4 border-b-4 border-green-900">
-                    <div
-                        class="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mb-2 group-hover:bg-white/30 transition-colors">
-                        <i class="fas fa-plus text-4xl"></i>
-                    </div>
-                    <span class="text-2xl font-black uppercase tracking-wide">Shto Vërtetim</span>
-                </button>
-
-                <button onclick="showClientManagement()" id="btn-manage-clients"
-                    class="group bg-gradient-to-br from-green-700 to-green-800 text-white p-8 rounded-3xl shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all flex flex-col items-center justify-center gap-4 border-b-4 border-green-950">
-                    <div
-                        class="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mb-2 group-hover:bg-white/30 transition-colors">
-                        <i class="fas fa-users-cog text-4xl"></i>
-                    </div>
-                    <span class="text-2xl font-black uppercase tracking-wide">Menaxho Klientët</span>
-                </button>
-
-
-
-                <button onclick="showPanicList()" id="dash-panic-btn"
-                    class="group bg-gradient-to-br from-red-600 to-red-700 text-white p-8 rounded-3xl shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all flex flex-col items-center justify-center gap-4 border-b-4 border-red-900 relative overflow-hidden">
-                    <div
-                        class="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mb-2 group-hover:bg-white/30 transition-colors">
-                        <i class="fas fa-exclamation-triangle text-4xl"></i>
-                    </div>
-                    <span class="text-2xl font-black uppercase tracking-wide">Ri-Intervenim</span>
-                    <span id="dash-expired-count"
-                        class="absolute top-6 right-6 bg-white text-red-700 font-black px-3 py-1 rounded-full text-sm shadow-lg">0</span>
-                </button>
-
+            <!-- SHIFRAT -->
+            <div class="grid grid-cols-3 gap-3 w-full max-w-4xl mt-6">
                 <button onclick="showList()"
-                    class="group bg-gradient-to-br from-gray-800 to-gray-900 text-white p-8 rounded-3xl shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all flex flex-col items-center justify-center gap-4 border-b-4 border-black">
-                    <div
-                        class="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mb-2 group-hover:bg-white/30 transition-colors">
-                        <i class="fas fa-folder-open text-4xl"></i>
-                    </div>
-                    <span class="text-2xl font-black uppercase tracking-wide">Vërtetimet e Lëshuara</span>
+                    class="bg-white rounded-2xl shadow-md border border-gray-100 p-3 md:p-4 text-left hover:shadow-lg transition-all">
+                    <div class="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-gray-400">Këtë muaj</div>
+                    <div id="dash-month-count" class="text-2xl md:text-3xl font-black text-gray-900 mt-1">0</div>
                 </button>
+                <button onclick="showPanicList()" id="dash-panic-btn"
+                    class="bg-white rounded-2xl shadow-md border border-red-100 p-3 md:p-4 text-left hover:shadow-lg transition-all">
+                    <div class="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-red-400">Ri-Intervenim</div>
+                    <div id="dash-expired-count" class="text-2xl md:text-3xl font-black text-red-600 mt-1">0</div>
+                </button>
+                <button onclick="showArchiveList()"
+                    class="bg-white rounded-2xl shadow-md border border-gray-100 p-3 md:p-4 text-left hover:shadow-lg transition-all">
+                    <div class="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-gray-400">Arkiv</div>
+                    <div id="dash-archive-count" class="text-2xl md:text-3xl font-black text-gray-500 mt-1">0</div>
+                </button>
+            </div>
 
+            <!-- VEPRIMI KRYESOR -->
+            <button onclick="createNew()"
+                class="w-full max-w-4xl mt-4 bg-gradient-to-br from-green-600 to-green-700 text-white p-5 md:p-6 rounded-2xl shadow-xl hover:shadow-2xl transition-all flex items-center justify-center gap-4 border-b-4 border-green-900 active:translate-y-0.5">
+                <span class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                    <i class="fas fa-plus text-2xl"></i>
+                </span>
+                <span class="text-xl md:text-2xl font-black uppercase tracking-wide">Shto Vërtetim</span>
+            </button>
+
+            <!-- VEPRIMET E TJERA -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 w-full max-w-4xl mt-3">
+                <button onclick="showList()"
+                    class="bg-white rounded-2xl shadow-md border border-gray-100 p-4 hover:shadow-lg transition-all flex flex-col items-center justify-center gap-2 text-center">
+                    <i class="fas fa-folder-open text-2xl text-gray-800"></i>
+                    <span class="text-xs font-black uppercase tracking-wide text-gray-800">Vërtetimet e Lëshuara</span>
+                </button>
+                <button onclick="showPanicList()"
+                    class="bg-white rounded-2xl shadow-md border border-gray-100 p-4 hover:shadow-lg transition-all flex flex-col items-center justify-center gap-2 text-center">
+                    <i class="fas fa-exclamation-triangle text-2xl text-red-600"></i>
+                    <span class="text-xs font-black uppercase tracking-wide text-gray-800">Ri-Intervenim</span>
+                </button>
+                <button onclick="showClientManagement()" id="btn-manage-clients"
+                    class="bg-white rounded-2xl shadow-md border border-gray-100 p-4 hover:shadow-lg transition-all flex flex-col items-center justify-center gap-2 text-center">
+                    <i class="fas fa-users-cog text-2xl text-green-700"></i>
+                    <span class="text-xs font-black uppercase tracking-wide text-gray-800">Menaxho Klientët</span>
+                </button>
                 <button onclick="showReport()" id="btn-report"
-                    class="group bg-gradient-to-br from-blue-600 to-blue-700 text-white p-8 rounded-3xl shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all flex flex-col items-center justify-center gap-4 border-b-4 border-blue-900">
-                    <div
-                        class="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mb-2 group-hover:bg-white/30 transition-colors">
-                        <i class="fas fa-chart-bar text-4xl"></i>
-                    </div>
-                    <span class="text-2xl font-black uppercase tracking-wide">Raporti Mujor</span>
+                    class="bg-white rounded-2xl shadow-md border border-gray-100 p-4 hover:shadow-lg transition-all flex flex-col items-center justify-center gap-2 text-center">
+                    <i class="fas fa-chart-bar text-2xl text-blue-600"></i>
+                    <span class="text-xs font-black uppercase tracking-wide text-gray-800">Raporti Mujor</span>
                 </button>
             </div>
             <div
@@ -1757,6 +1757,11 @@
             const count = db.filter(d => expiryStatus(d, latest) === 'ri-intervenim').length;
             const badge = document.getElementById('dash-expired-count');
             if (badge) badge.innerText = count;
+            const archive = document.getElementById('dash-archive-count');
+            if (archive) archive.innerText = db.filter(d => expiryStatus(d, latest) === 'arkiv').length;
+            const thisMonth = localDateStr(new Date()).slice(0, 7);
+            const month = document.getElementById('dash-month-count');
+            if (month) month.innerText = db.filter(d => (d.data || '').startsWith(thisMonth)).length;
         }
 
         // --- RAPORTI MUJOR ---

@@ -197,7 +197,7 @@
                 <button onclick="showReport()" id="btn-report"
                     class="bg-white rounded-2xl shadow-md border border-gray-100 p-4 hover:shadow-lg transition-all flex flex-col items-center justify-center gap-2 text-center">
                     <i class="fas fa-chart-bar text-2xl text-blue-600"></i>
-                    <span class="text-xs font-black uppercase tracking-wide text-gray-800">Raporti Mujor</span>
+                    <span class="text-xs font-black uppercase tracking-wide text-gray-800">Raportet</span>
                 </button>
             </div>
             <div
@@ -267,9 +267,17 @@
                     class="w-full md:w-auto bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-black uppercase tracking-wide transition-all shadow-lg flex items-center justify-center gap-2">
                     <i class="fas fa-arrow-left"></i> Kthehu në Menu
                 </button>
-                <div class="flex w-full md:w-auto gap-2">
+                <div class="flex flex-wrap w-full md:w-auto gap-2">
+                    <div class="flex bg-gray-200 p-1 rounded-xl">
+                        <button onclick="setReportMode('mujor')" id="btn-report-mujor"
+                            class="px-4 py-2 rounded-lg font-black text-xs uppercase transition-all">Mujor</button>
+                        <button onclick="setReportMode('vjetor')" id="btn-report-vjetor"
+                            class="px-4 py-2 rounded-lg font-black text-xs uppercase transition-all">Vjetor</button>
+                    </div>
                     <input type="month" id="report-month" onchange="renderReport()"
-                        class="flex-1 p-3 bg-white border-2 border-gray-200 rounded-xl font-bold outline-none focus:border-green-500">
+                        class="flex-1 min-w-[150px] p-3 bg-white border-2 border-gray-200 rounded-xl font-bold outline-none focus:border-green-500">
+                    <select id="report-year" onchange="renderReport()"
+                        class="hidden flex-1 min-w-[110px] p-3 bg-white border-2 border-gray-200 rounded-xl font-bold outline-none focus:border-green-500"></select>
                     <button onclick="exportReportExcel()" id="btn-export-excel"
                         class="bg-white hover:bg-green-50 text-green-700 border-2 border-green-600 px-5 py-2 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-sm text-sm whitespace-nowrap">
                         <i class="fas fa-file-excel"></i> Excel
@@ -1846,14 +1854,55 @@
             if (month) month.innerText = db.filter(d => (d.data || '').startsWith(thisMonth)).length;
         }
 
-        // --- RAPORTI MUJOR ---
+        // --- RAPORTI MUJOR / VJETOR ---
+        const MUAJT = ['Janar', 'Shkurt', 'Mars', 'Prill', 'Maj', 'Qershor', 'Korrik', 'Gusht', 'Shtator', 'Tetor', 'Nëntor', 'Dhjetor'];
+        let reportMode = 'mujor';
+
         function showReport() {
             if (currentRole !== 'admin') return showDashboard();
             const monthInput = document.getElementById('report-month');
             if (!monthInput.value) monthInput.value = localDateStr(new Date()).slice(0, 7);
+
+            // Vitet që kanë vërtetime (+ viti aktual), nga më i riu
+            const yearSelect = document.getElementById('report-year');
+            const selectedYear = yearSelect.value || String(new Date().getFullYear());
+            const years = new Set([String(new Date().getFullYear())]);
+            db.forEach(d => { if (/^\d{4}-/.test(d.data || '')) years.add(d.data.slice(0, 4)); });
+            yearSelect.innerHTML = [...years].sort().reverse().map(y => `<option value="${y}" ${y === selectedYear ? 'selected' : ''}>${y}</option>`).join('');
+
             ['dashboard-view', 'list-view', 'edit-view', 'print-view', 'client-view', 'clients-mgmt-view', 'report-view'].forEach(id => document.getElementById(id).classList.add('hidden'));
             document.getElementById('report-view').classList.remove('hidden');
+            setReportMode(reportMode);
+        }
+
+        function setReportMode(mode) {
+            reportMode = mode;
+            const active = 'px-4 py-2 rounded-lg font-black text-xs uppercase transition-all bg-white text-green-700 shadow';
+            const idle = 'px-4 py-2 rounded-lg font-black text-xs uppercase transition-all text-gray-500';
+            document.getElementById('btn-report-mujor').className = mode === 'mujor' ? active : idle;
+            document.getElementById('btn-report-vjetor').className = mode === 'vjetor' ? active : idle;
+            document.getElementById('report-month').classList.toggle('hidden', mode !== 'mujor');
+            document.getElementById('report-year').classList.toggle('hidden', mode !== 'vjetor');
             renderReport();
+        }
+
+        // Periudha e zgjedhur: prefiksi i datës ("2026-10" ose "2026") dhe titulli
+        function getReportPeriod() {
+            if (reportMode === 'vjetor') {
+                const y = document.getElementById('report-year').value;
+                return { prefix: y, title: `Viti ${y}`, label: 'Raporti vjetor', isYear: true };
+            }
+            const month = document.getElementById('report-month').value;
+            const [y, m] = month.split('-');
+            return { prefix: month, title: `${MUAJT[parseInt(m) - 1]} ${y}`, label: 'Raporti mujor', isYear: false };
+        }
+
+        // Për raportin vjetor: shifrat e secilit muaj
+        function computeMonthlyBreakdown(year) {
+            return MUAJT.map((emri, i) => {
+                const r = computeReport(`${year}-${String(i + 1).padStart(2, '0')}`);
+                return { emri, vertetime: r.docs.length, privat: r.privat, publik: r.publik, kontrata: r.kontrata, teArdhura: r.teArdhura };
+            });
         }
 
         // "25", "25.50", "25,50 €" -> 25.5 ; tekst pa numër -> null
@@ -1911,10 +1960,8 @@
         }
 
         function renderReport() {
-            const month = document.getElementById('report-month').value;
-            const r = computeReport(month);
-            const [y, m] = month.split('-');
-            const muajt = ['Janar', 'Shkurt', 'Mars', 'Prill', 'Maj', 'Qershor', 'Korrik', 'Gusht', 'Shtator', 'Tetor', 'Nëntor', 'Dhjetor'];
+            const period = getReportPeriod();
+            const r = computeReport(period.prefix);
             const tile = (label, value, color) => `
                 <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-4">
                     <div class="text-[10px] font-black uppercase tracking-widest text-gray-400">${label}</div>
@@ -1930,20 +1977,40 @@
             };
             const preps = Object.values(r.preparatet).sort((a, b) => a.emri.localeCompare(b.emri));
 
+            // Raporti vjetor: tabela sipas muajve
+            let monthlyHtml = '';
+            if (period.isYear) {
+                const months = computeMonthlyBreakdown(period.prefix);
+                monthlyHtml = `<div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 mb-6 overflow-x-auto">
+                    <div class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">Sipas muajve</div>
+                    <table class="w-full text-sm">
+                        <thead><tr class="text-left text-[10px] uppercase tracking-wider text-gray-400"><th class="py-2">Muaji</th><th class="py-2 text-right">Vërtetime</th><th class="py-2 text-right">Privat / Publik</th><th class="py-2 text-right">Kontratë</th><th class="py-2 text-right">Të ardhurat</th></tr></thead>
+                        <tbody>${months.map(mo => `<tr class="border-t border-gray-50 ${mo.vertetime ? '' : 'text-gray-300'}">
+                            <td class="py-2 font-black uppercase">${mo.emri}</td>
+                            <td class="py-2 text-right font-black">${mo.vertetime}</td>
+                            <td class="py-2 text-right font-bold">${mo.privat} / ${mo.publik}</td>
+                            <td class="py-2 text-right font-bold">${mo.kontrata}</td>
+                            <td class="py-2 text-right font-black ${mo.vertetime ? 'text-green-600' : ''}">${fmtNumber(mo.teArdhura)} €</td>
+                        </tr>`).join('')}</tbody>
+                    </table>
+                </div>`;
+            }
+
             document.getElementById('report-content').innerHTML = `
-                <h2 class="text-2xl font-black uppercase tracking-tight mb-4">${muajt[parseInt(m) - 1]} ${y}</h2>
+                <h2 class="text-2xl font-black uppercase tracking-tight mb-4">${period.title}</h2>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                     ${tile('Vërtetime', r.docs.length, 'text-gray-900')}
                     ${tile('Privat / Publik', `${r.privat} / ${r.publik}`, 'text-gray-900')}
                     ${tile('Të ardhurat', fmtNumber(r.teArdhura) + ' €', 'text-green-600')}
                     ${tile('Me kontratë', r.kontrata, 'text-blue-600')}
                 </div>
+                ${monthlyHtml}
                 <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 mb-6 overflow-x-auto">
                     <div class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">Preparatet e përdorura</div>
                     ${preps.length ? `<table class="w-full text-sm">
                         <thead><tr class="text-left text-[10px] uppercase tracking-wider text-gray-400"><th class="py-2">Preparati</th><th class="py-2 text-right">Sasia totale</th><th class="py-2 text-right">Njësia</th><th class="py-2 text-right">Herë</th></tr></thead>
                         <tbody>${preps.map(p => `<tr class="border-t border-gray-50"><td class="py-2 font-black uppercase">${p.emri}</td><td class="py-2 text-right font-black">${fmtNumber(p.sasia)}</td><td class="py-2 text-right font-bold text-gray-500">${p.njesia}</td><td class="py-2 text-right font-bold text-gray-500">${p.here}</td></tr>`).join('')}</tbody>
-                    </table>` : '<div class="text-sm text-gray-400 font-bold">Asnjë preparat këtë muaj</div>'}
+                    </table>` : '<div class="text-sm text-gray-400 font-bold">Asnjë preparat në këtë periudhë</div>'}
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     ${countTable('Shërbimet', r.sherbimet)}
@@ -1968,11 +2035,11 @@
             btn.disabled = true;
             try {
                 if (!window.XLSX) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
-                const month = document.getElementById('report-month').value;
-                const r = computeReport(month);
+                const period = getReportPeriod();
+                const r = computeReport(period.prefix);
 
                 const permbledhje = [
-                    ['Raporti mujor', month],
+                    [period.label, period.title],
                     [],
                     ['Vërtetime gjithsej', r.docs.length],
                     ['Privat', r.privat],
@@ -2002,9 +2069,14 @@
                     XLSX.utils.book_append_sheet(wb, ws, name);
                 };
                 addSheet(permbledhje, 'Përmbledhje', [24, 14]);
+                if (period.isYear) {
+                    addSheet([['Muaji', 'Vërtetime', 'Privat', 'Publik', 'Me kontratë', 'Të ardhurat (€)'],
+                        ...computeMonthlyBreakdown(period.prefix).map(mo => [mo.emri, mo.vertetime, mo.privat, mo.publik, mo.kontrata, mo.teArdhura])],
+                        'Sipas muajve', [12, 11, 9, 9, 12, 15]);
+                }
                 addSheet(preparatet, 'Preparatet', [36, 14, 12, 16]);
                 addSheet(vertetimet, 'Vërtetimet', [14, 12, 8, 8, 30, 30, 14, 14, 30, 30, 40, 10, 9, 18, 24]);
-                XLSX.writeFile(wb, `Raporti_${month}.xlsx`);
+                XLSX.writeFile(wb, `Raporti_${period.prefix}.xlsx`);
             } catch (e) {
                 alert('Gabim gjatë eksportit: ' + e.message);
             } finally {

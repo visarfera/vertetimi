@@ -781,11 +781,19 @@
         }
 
         // --- FIREBASE SYNC ---
+        let unsubscribeListeners = [];
+
+        function stopRealtimeListeners() {
+            unsubscribeListeners.forEach(unsub => unsub());
+            unsubscribeListeners = [];
+        }
+
+        // Thirret vetëm pasi përdoruesi është kyçur; përndryshe Firestore e refuzon dhe listener-i ndalet përgjithmonë
         function initRealtimeListeners() {
-            // Certificates
+            stopRealtimeListeners();
             // Certificates
             // We fetch ALL docs and sort client-side to handle mixed data (some have 'createdAt', some don't)
-            firestore.collection('vertetimet').onSnapshot((snapshot) => {
+            unsubscribeListeners.push(firestore.collection('vertetimet').onSnapshot((snapshot) => {
                 db = [];
                 snapshot.forEach((doc) => {
                     const data = doc.data();
@@ -836,10 +844,10 @@
                     updateDashboardCount();
                     updateClientDatalist();
                 }
-            });
+            }));
 
             // Clients - Store with Firestore Doc ID
-            firestore.collection('klientet').onSnapshot((snapshot) => {
+            unsubscribeListeners.push(firestore.collection('klientet').onSnapshot((snapshot) => {
                 clientsDb = [];
                 snapshot.forEach((doc) => {
                     const data = doc.data();
@@ -850,7 +858,7 @@
                 if (!document.getElementById('clients-mgmt-view').classList.contains('hidden')) {
                     renderClientsTable();
                 }
-            });
+            }));
         }
 
         // --- CORE LOGIC ---
@@ -1988,7 +1996,6 @@
         window.onload = () => {
             buildForms();
             initPads();
-            initRealtimeListeners();
             // Attach Login Listener
             document.getElementById('login-btn').onclick = doLogin;
 
@@ -2020,10 +2027,14 @@
                 if (!user) {
                     currentUser = null;
                     currentRole = "user";
+                    stopRealtimeListeners();
+                    db = [];
+                    clientsDb = [];
                     showLogin();
                     return;
                 }
                 currentUser = user;
+                initRealtimeListeners();
                 if (document.getElementById('dash-user-email')) document.getElementById('dash-user-email').textContent = user.email;
 
                 // Load role from Firestore:

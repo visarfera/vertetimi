@@ -18,8 +18,13 @@ service cloud.firestore {
     }
 
     match /klientet/{nui} {
-      allow read: if signedIn();
-      allow create, update, delete: if isAdmin();
+      allow read, create: if signedIn();   // çdo përdorues mund të shtojë klient të ri
+      allow update, delete: if isAdmin();  // editimi dhe fshirja vetëm admin
+    }
+
+    // Rezervimi i numrave të vërtetimeve (numeruesi/privat-YY)
+    match /numeruesi/{docId} {
+      allow read, write: if signedIn();
     }
 
     match /users/{uid} {

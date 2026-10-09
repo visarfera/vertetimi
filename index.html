@@ -890,6 +890,11 @@
             return months < 0 ? 0 : months;
         }
 
+        // Data lokale "YYYY-MM-DD" (toISOString jep datën UTC, që pas mesnate është dita e djeshme)
+        function localDateStr(date) {
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        }
+
         // Klienti identifikohet me emër + adresë
         function clientKey(d) {
             return `${(d.klienti || '').trim().toUpperCase()}|${(d.adresa || '').trim().toUpperCase()}`;
@@ -1236,7 +1241,7 @@
             document.querySelector('input[name="client_type"][value="privat"]').click();
             toggleClientType(); // Ensure UI and numbering reset correctly
             const tani = new Date();
-            document.getElementById('f-data').value = tani.toISOString().split('T')[0];
+            document.getElementById('f-data').value = localDateStr(tani);
             document.getElementById('f-ora').value = tani.toTimeString().slice(0, 5);
             
             const nextNr = getNextCertNumber();
@@ -1564,7 +1569,7 @@
             
             // Vendosim datën dhe orën e sotme
             const tani = new Date();
-            const today = tani.toISOString().split('T')[0];
+            const today = localDateStr(tani);
             document.getElementById('f-data').value = today;
             document.getElementById('f-ora').value = tani.toTimeString().slice(0, 5);
             
